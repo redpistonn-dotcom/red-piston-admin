@@ -1,0 +1,268 @@
+/* Tailwind v3 — preflight disabled so ERP pages are not affected */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── Full reset scoped to the landing page wrapper ─────────────────
+   Since preflight is off, browser defaults bleed in:
+   - html/body get margin:8px (shows as black border around page)
+   - <button> gets native OS appearance (gray background, border)
+   - <select> gets native OS appearance
+   These rules reset ONLY inside .lp-root                           */
+.lp-root {
+  display: block;
+  position: relative;
+}
+
+/* Remove body/html margin that creates the black "border" */
+html:has(.lp-root),
+body:has(.lp-root) {
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  background-color: #fcf9f8 !important;
+}
+
+.lp-root *, .lp-root *::before, .lp-root *::after {
+  box-sizing: border-box;
+}
+
+/* Strip native button styles inside landing page */
+.lp-root button {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-family: inherit;
+  padding: 0;
+  margin: 0;
+  outline: none;
+}
+
+/* Strip native select styles and add custom chevron */
+.lp-root select {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%238b716e' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+  background-position: right 12px center;
+  background-repeat: no-repeat;
+  background-size: 16px;
+  /* Inline styles set padding-right: 36px — this ensures chevron doesn't overlap */
+  outline: none;
+  color: #1c1b1b !important;
+}
+
+.lp-root select option {
+  color: #1c1b1b;
+  background-color: #ffffff;
+}
+
+/* Focus ring for selects — subtle, not aggressive */
+.lp-root select:focus {
+  border-color: #c9a8a5 !important;
+  box-shadow: 0 0 0 3px rgba(139, 30, 30, 0.08);
+  outline: none;
+}
+
+/* Disabled select — visually muted */
+.lp-root select:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Focus ring for inputs */
+.lp-root input:focus {
+  border-color: #8b1e1e !important;
+  box-shadow: 0 0 0 2px rgba(139, 30, 30, 0.15);
+  outline: none;
+}
+
+/* ── Custom utilities (same as the design's <style> block) ───────── */
+.industrial-grid {
+  background-image: radial-gradient(#e5e2e1 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+.hide-scrollbar::-webkit-scrollbar { display: none; }
+.hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+.bg-maroon    { background-color: #8b1e1e; }
+.text-maroon  { color: #8b1e1e; }
+.border-maroon{ border-color: #8b1e1e; }
+.bg-cream     { background-color: #fcf9f8; }
+
+.material-symbols-outlined {
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+  vertical-align: middle;
+}
+.material-symbols-outlined.fill {
+  font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+}
+
+/* ── CSS loading spinner (font-independent) ──────────────────────────── */
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+.rp-spinner {
+  display: inline-block;
+  border-radius: 50%;
+  border: 2.5px solid rgba(139, 113, 110, 0.2);
+  border-top-color: #8b1e1e;
+  animation: spin 0.75s linear infinite;
+  flex-shrink: 0;
+  vertical-align: middle;
+}
+.rp-spinner-sm { width: 14px; height: 14px; }
+.rp-spinner-md { width: 18px; height: 18px; }
+.rp-spinner-lg { width: 48px; height: 48px; border-width: 4px; }
+
+/* ── PublicHeader responsive classes ─────────────────────────────────── */
+
+/* Desktop: hamburger hidden, nav + search + right visible */
+.ph-hamburger     { display: none !important; }
+.ph-nav           { display: flex !important; }
+.ph-search        { display: block !important; }
+.ph-right         { display: flex !important; }
+.ph-m-icons       { display: none !important; }
+.ph-m-search      { display: none !important; }
+
+/* Marketplace filter button: hidden on desktop */
+.mp-filter-btn    { display: none !important; }
+
+/* Mobile drawer — hidden by default, JS shows it */
+.ph-mobile-drawer {
+  display: none;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: #fff;
+  border-bottom: 2px solid #dfbfbc;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.10);
+  z-index: 200;
+  flex-direction: column;
+  gap: 0;
+}
+.ph-mobile-drawer.ph-open { display: flex; }
+
+/* ── Global iOS zoom fix: prevent auto-zoom on focused inputs ─────────── */
+@media (max-width: 767px) {
+  .lp-root input,
+  .lp-root select,
+  .lp-root textarea { font-size: 16px !important; }
+
+  /* PublicHeader: swap desktop → hamburger layout */
+  .ph-hamburger { display: flex !important; }
+  .ph-nav       { display: none !important; }
+  .ph-search    { display: none !important; }
+  .ph-right     { display: none !important; }
+  .ph-m-icons   { display: flex !important; }
+  .ph-m-search  { display: block !important; }
+
+  /* Landing page auth modal: hide left panel at narrow widths */
+  .auth-left-panel { display: none !important; }
+
+  /* Supplier hero: stack vertically */
+  .sp-hero-inner  { flex-direction: column !important; gap: 32px !important; }
+  .sp-stat-grid   { width: 100% !important; }
+
+  /* Supplier cards: stack vertically */
+  .sp-supplier-card { flex-direction: column !important; }
+  .sp-supplier-img  { width: 100% !important; height: 200px !important; }
+  .sp-supplier-body { flex-direction: column !important; align-items: flex-start !important; }
+  .sp-supplier-btns { flex-direction: row !important; width: 100% !important; align-items: stretch !important; }
+  .sp-supplier-btns button { flex: 1 !important; }
+
+  /* Benefits grid: 2-col on tablet/phone */
+  .sp-benefits-grid { grid-template-columns: 1fr 1fr !important; }
+
+  /* Section header rows: allow wrap */
+  .lp-section-header { flex-wrap: wrap !important; gap: 8px !important; }
+
+  /* Hero CTA button rows */
+  .lp-cta-row { flex-wrap: wrap !important; }
+
+  /* Marketplace sidebar: hidden by default, shown via JS toggle */
+  .mp-sidebar-hidden { display: none !important; }
+  .mp-sidebar-open   { display: block !important; width: 100% !important; }
+  /* When sidebar is open on mobile, make it full-width (override inline width:260) */
+  .mp-sidebar-open aside,
+  .mp-sidebar-open { width: 100% !important; }
+
+  /* Mobile filters button: show on mobile */
+  .mp-filter-btn { display: flex !important; }
+
+  /* Marketplace main layout: column on mobile */
+  .mp-main-layout { flex-direction: column !important; padding: 16px 12px 40px !important; }
+
+  /* Login toast: full-width */
+  .mp-login-toast { width: calc(100vw - 32px) !important; min-width: unset !important; left: 16px !important; right: 16px !important; transform: none !important; }
+
+  /* Checkout grid */
+  .checkout-grid { grid-template-columns: 1fr !important; gap: 24px !important; }
+  .inner-grid-2  { grid-template-columns: 1fr !important; }
+  .inner-grid-3  { grid-template-columns: 1fr !important; }
+
+  /* Cart page (design: mobile shopping cart) — stack item list above summary */
+  .cart-main       { flex-direction: column !important; padding: 20px 12px 40px !important; gap: 24px !important; }
+  .cart-items-sec  { flex: 1 1 auto !important; }
+  .cart-item-row   { padding: 14px !important; gap: 12px !important; }
+  .cart-item-img   { width: 84px !important; height: 84px !important; }
+  .cart-item-row h3 { font-size: 15px !important; }
+  .cart-aside      { min-width: 0 !important; width: 100% !important; }
+  .cart-aside > div { position: static !important; }
+}
+
+@media (max-width: 480px) {
+  /* Benefits grid: 1-col on very small phones */
+  .sp-benefits-grid { grid-template-columns: 1fr !important; }
+  /* Product grid: 1 col on very small phones */
+  .mp-grid-2col { grid-template-columns: 1fr !important; }
+}
+
+/* ── LandingPage specific ─────────────────────────────────────────────── */
+@media (max-width: 767px) {
+  /* Vehicle selector inner grid: already using Tailwind but ensure override */
+  .lp-root .lp-vehicle-grid { grid-template-columns: 1fr !important; }
+
+  /* Number plate input font size */
+  .lp-root .lp-plate-input { font-size: clamp(14px, 4vw, 20px) !important; letter-spacing: clamp(0.08em, 1vw, 0.18em) !important; }
+
+  /* Coming Soon Services: 2-col on tablet / 1-col on mobile */
+  .lp-root .coming-soon-grid { grid-template-columns: repeat(2, 1fr) !important; }
+}
+
+@media (max-width: 480px) {
+  .lp-root .coming-soon-grid { grid-template-columns: 1fr !important; }
+}
+
+/* ── Safe-area insets for iPhone notch / home bar ─────────────────────── */
+.lp-root header { padding-top: env(safe-area-inset-top, 0px); }
+.lp-root footer,
+.lp-cta-footer  { padding-bottom: env(safe-area-inset-bottom, 0px); }
+
+/* min-width floor so page never shrinks below 320px */
+.lp-root { min-width: 320px; }
+
+/* ── Compact spacing to match ERP operations dashboard density ─────────────
+   Tailwind custom tokens (from SP scale) produce py-giant=64px, py-huge=48px
+   which are too spacious for a professional B2B industrial platform.
+   Override inside .lp-root only so ERP pages are unaffected.               */
+.lp-root .py-giant { padding-top: 40px !important; padding-bottom: 40px !important; }
+.lp-root .py-huge  { padding-top: 28px !important; padding-bottom: 28px !important; }
+.lp-root .py-xl    { padding-top: 20px !important; padding-bottom: 20px !important; }
+.lp-root .mb-huge  { margin-bottom: 24px !important; }
+.lp-root .mb-xl    { margin-bottom: 16px !important; }
+.lp-root .gap-huge { gap: 24px !important; }
+.lp-root .gap-giant{ gap: 32px !important; }
+
+/* Skeleton shimmer for loading product/shop cards */
+@keyframes lp-pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.45; }
+}
+.lp-skeleton { animation: lp-pulse 1.6s ease-in-out infinite; }

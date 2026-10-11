@@ -1,6 +1,5 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { flushSync, createPortal } from "react-dom";
-import * as XLSX from "xlsx";
 import { api, BASE_URL } from "../api/client.js";
 import { T, FONT } from "../theme.js"; // T kept for any remaining tokens
 import { Avatar } from "../components/Avatar.jsx";
@@ -56,15 +55,21 @@ function RoleBadge({ slug, name }) {
 }
 
 function VerificationBadge({ status }) {
-  const base = { borderRadius: 6, padding: "2px 8px", fontSize: 11, fontWeight: 700, fontFamily: FONT.ui };
+  const base = { borderRadius: 6, padding: "2px 8px", fontSize: 11, fontWeight: 700, fontFamily: FONT.ui, display: "inline-flex", alignItems: "center", gap: 4 };
   if (status === "PENDING") return (
-    <span style={{ ...base, background: C.amberBg, border: `1px solid ${C.amber}`, color: C.amber }}>⏳ Pending</span>
+    <span style={{ ...base, background: C.amberBg, border: `1px solid ${C.amber}`, color: C.amber }}>
+      <span className="material-symbols-outlined" style={{ fontSize: 12 }}>schedule</span> Pending
+    </span>
   );
   if (status === "REJECTED") return (
-    <span style={{ ...base, background: C.redBg, border: `1px solid ${C.red}`, color: C.red }}>✗ Rejected</span>
+    <span style={{ ...base, background: C.redBg, border: `1px solid ${C.red}`, color: C.red }}>
+      <span className="material-symbols-outlined" style={{ fontSize: 12 }}>cancel</span> Rejected
+    </span>
   );
   return (
-    <span style={{ ...base, background: C.greenBg, border: `1px solid ${C.green}`, color: C.green }}>✓ Approved</span>
+    <span style={{ ...base, background: C.greenBg, border: `1px solid ${C.green}`, color: C.green }}>
+      <span className="material-symbols-outlined" style={{ fontSize: 12 }}>check_circle</span> Approved
+    </span>
   );
 }
 
@@ -155,10 +160,14 @@ function AddUserModal({ userTypes, onClose, onSuccess }) {
           />
           <button
             type="button"
-            style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", border: "none", background: "transparent", color: C.t3, cursor: "pointer", fontSize: 16 }}
+            aria-label={showPw ? "Hide password" : "Show password"}
+            style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", border: "none", background: "transparent", color: C.t3, cursor: "pointer", lineHeight: 0, padding: 4 }}
             onClick={() => setShowPw(v => !v)}
           >
-            {showPw ? "🙈" : "👁"}
+            {showPw
+              ? <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+              : <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            }
           </button>
         </div>
 
@@ -374,7 +383,8 @@ const PART_CATEGORIES = [
 
 // VEHICLE_TYPES is now loaded from the DB — see useEffect below
 
-function downloadTemplate() {
+async function downloadTemplate() {
+  const XLSX = await import("xlsx");
   const wb = XLSX.utils.book_new();
   const headers = TEMPLATE_COLS.map(c => c.label);
   const ex1 = TEMPLATE_COLS.map(c => c.example);
@@ -406,6 +416,7 @@ function cellStr(v) {
 }
 
 async function parseExcel(file) {
+  const XLSX = await import("xlsx");
   const buf = await file.arrayBuffer();
   const wb = XLSX.read(buf, { type: 'array' });
   const ws = wb.Sheets[wb.SheetNames[0]];
@@ -457,25 +468,38 @@ async function parseExcel(file) {
 }
 
 // ─── Pending Parts Review ─────────────────────────────────────────────────────
+const PENDING_PARTS_LIMIT = 20;
+
 function PendingPartsSection() {
   const [parts, setParts] = useState<any[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [actioning, setActioning] = useState<number | null>(null);
   const [search, setSearch] = useState('');
+  const [offset, setOffset] = useState(0);
   const [msg, setMsg] = useState('');
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (q: string, off: number) => {
     setLoading(true);
     try {
-      const res: any = await api.get(`/api/admin/catalog/parts?status=PENDING&q=${encodeURIComponent(search)}&limit=50`);
+      const res: any = await api.get(`/api/admin/catalog/parts?status=PENDING&q=${encodeURIComponent(q)}&limit=${PENDING_PARTS_LIMIT}&offset=${off}`);
       setParts(res.parts || []);
       setTotal(res.total || 0);
     } catch (e) { console.error('[PendingParts]', e); }
     finally { setLoading(false); }
-  }, [search]);
+  }, []);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => { load('', 0); }, []); // eslint-disable-line
+
+  // Debounced re-fetch on search — skips the very first run since the mount
+  // effect above already covers the initial (empty-search) load; without this
+  // guard both effects fire on mount and double the initial request.
+  const searchDidMount = useRef(false);
+  useEffect(() => {
+    if (!searchDidMount.current) { searchDidMount.current = true; return; }
+    const t = setTimeout(() => { setOffset(0); load(search, 0); }, 350);
+    return () => clearTimeout(t);
+  }, [search]); // eslint-disable-line
 
   const act = async (partId: number, action: 'approve' | 'reject') => {
     setActioning(partId);
@@ -546,6 +570,17 @@ function PendingPartsSection() {
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+      {total > PENDING_PARTS_LIMIT && (
+        <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end', marginTop: 10, alignItems: 'center' }}>
+          <span style={{ fontSize: 11, color: C.t3, fontFamily: "'Inter', sans-serif", marginRight: 8 }}>
+            {offset + 1}–{Math.min(offset + PENDING_PARTS_LIMIT, total)} of {total.toLocaleString('en-IN')}
+          </span>
+          <button disabled={offset === 0} onClick={() => { const o = offset - PENDING_PARTS_LIMIT; setOffset(o); load(search, o); }}
+            style={{ background: 'transparent', border: `1px solid ${C.border}`, borderRadius: 7, padding: '6px 13px', color: offset === 0 ? C.t4 : C.t2, fontSize: 12, fontWeight: 600, cursor: offset === 0 ? 'not-allowed' : 'pointer', fontFamily: "'Inter', sans-serif" }}>← Prev</button>
+          <button disabled={offset + PENDING_PARTS_LIMIT >= total} onClick={() => { const o = offset + PENDING_PARTS_LIMIT; setOffset(o); load(search, o); }}
+            style={{ background: 'transparent', border: `1px solid ${C.border}`, borderRadius: 7, padding: '6px 13px', color: offset + PENDING_PARTS_LIMIT >= total ? C.t4 : C.t2, fontSize: 12, fontWeight: 600, cursor: offset + PENDING_PARTS_LIMIT >= total ? 'not-allowed' : 'pointer', fontFamily: "'Inter', sans-serif" }}>Next →</button>
         </div>
       )}
     </div>
@@ -627,7 +662,7 @@ function CatalogTab() {
   const [dbLoading, setDbLoading] = useState(false);
   const [dbSearch, setDbSearch]   = useState('');
   const [dbOffset, setDbOffset]   = useState(0);
-  const DB_LIMIT = 50;
+  const DB_LIMIT = 20;
 
   const fetchDbStats = useCallback(async () => {
     try { const res = await api.get('/api/admin/catalog/stats'); setDbStats(res.data); } catch { /* offline */ }
@@ -649,7 +684,12 @@ function CatalogTab() {
     fetchDbStats(); fetchDbParts('', 0);
   }, []); // eslint-disable-line
 
+  // Debounced re-fetch on search — skips the very first run since the mount
+  // effect above already covers the initial (empty-search) load; without this
+  // guard both effects fire on mount and double the initial request.
+  const dbSearchDidMount = useRef(false);
   useEffect(() => {
+    if (!dbSearchDidMount.current) { dbSearchDidMount.current = true; return; }
     const t = setTimeout(() => { setDbOffset(0); fetchDbParts(dbSearch, 0); }, 350);
     return () => clearTimeout(t);
   }, [dbSearch]); // eslint-disable-line
@@ -1527,7 +1567,7 @@ export function SuperAdminPage({ onImpersonate, currentUser, activeTab: propTab,
   const fetchVerifications = useCallback(async () => {
     setVerLoading(true);
     try {
-      const res = await api.get("/api/admin/verifications");
+      const res = await api.get("/api/admin/shop-verifications");
       setVerifications(res.data || []);
     } catch (e) {
       setVerError(e.message || "Failed to load verifications");
@@ -1562,7 +1602,7 @@ export function SuperAdminPage({ onImpersonate, currentUser, activeTab: propTab,
     setError("");
     try {
       const res = await api.post(`/api/admin/impersonate/${user.userId}`);
-      onImpersonate(res.data.user, res.data.accessToken);
+      onImpersonate(res.data.user, res.data.handoffCode);
     } catch (e) {
       setError(e.message || "Impersonation failed");
       setImpersonatingId(null);
@@ -1800,12 +1840,15 @@ export function SuperAdminPage({ onImpersonate, currentUser, activeTab: propTab,
     }
   `;
 
+  // Material Symbols Outlined ligature names — not emoji (font-dependent,
+  // inconsistent across platforms). Matches the icon convention already used
+  // in AdminShell's nav and components/ui/StatCard.tsx.
   const STAT_CONFIG = [
-    { label: "Total Users",  key: "totalUsers",  color: C.violet, icon: "👥",  glow: C.violetBg },
-    { label: "Shop Owners",  key: "shopOwners",  color: C.green,  icon: "🏪",  glow: C.greenBg  },
-    { label: "Customers",    key: "customers",   color: C.sky,    icon: "🛒",  glow: C.skyBg    },
-    { label: "Total Shops",  key: "totalShops",  color: C.amber,  icon: "📦",  glow: C.amberBg  },
-    { label: "Admins",       key: "admins",      color: C.violet, icon: "🛡️", glow: C.violetBg },
+    { label: "Total Users",  key: "totalUsers",  color: C.violet, icon: "group",       glow: C.violetBg },
+    { label: "Shop Owners",  key: "shopOwners",  color: C.green,  icon: "storefront",  glow: C.greenBg  },
+    { label: "Customers",    key: "customers",   color: C.sky,    icon: "shopping_cart", glow: C.skyBg  },
+    { label: "Total Shops",  key: "totalShops",  color: C.amber,  icon: "inventory_2", glow: C.amberBg  },
+    { label: "Admins",       key: "admins",      color: C.violet, icon: "shield",      glow: C.violetBg },
   ];
 
   return (
@@ -1835,7 +1878,9 @@ export function SuperAdminPage({ onImpersonate, currentUser, activeTab: propTab,
               <div key={sc.label} className="admin-stat-card" style={S.statCard(sc.color, sc.glow)}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
                   <div className="stat-val" style={{ ...S.statVal, color: sc.color }}>{stats[sc.key] ?? "—"}</div>
-                  <div style={{ width: 34, height: 34, borderRadius: 9, background: `${sc.color}14`, border: `1px solid ${sc.color}28`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 }}>{sc.icon}</div>
+                  <div style={{ width: 34, height: 34, borderRadius: 9, background: `${sc.color}14`, border: `1px solid ${sc.color}28`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <span className="material-symbols-outlined" style={{ fontSize: 18, color: sc.color }}>{sc.icon}</span>
+                  </div>
                 </div>
                 <div className="stat-label" style={S.statLabel}>{sc.label}</div>
               </div>

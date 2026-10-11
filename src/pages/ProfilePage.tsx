@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../api/client.js";
 import { T, FONT } from "../theme.js";
@@ -60,6 +60,7 @@ const S = {
     padding: "11px 16px", color: T.amber, fontSize: 13, marginBottom: 14,
     display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12,
   },
+  passwordWrap: { position: "relative" as const } as const,
   card: {
     background: T.bg, border: `1px solid ${T.border}`, borderRadius: 12,
     padding: "14px 16px", marginBottom: 10,
@@ -76,9 +77,9 @@ const S = {
 };
 
 const PROVIDER_META = {
-  EMAIL: { icon: "✉️", label: "Email" },
-  PHONE: { icon: "📱", label: "Phone" },
-  GOOGLE: { icon: "🔵", label: "Google" },
+  EMAIL: { icon: "mail", label: "Email" },
+  PHONE: { icon: "phone_iphone", label: "Phone" },
+  GOOGLE: { icon: "g_mobiledata", label: "Google" },
 };
 
 const ROLE_LABELS: Record<string, string> = {
@@ -248,6 +249,15 @@ export function ProfilePage({ user, onUserUpdate, onLogout }) {
   const [pwdSaving, setPwdSaving] = useState(false);
   const [pwdError, setPwdError] = useState("");
   const [pwdSuccess, setPwdSuccess] = useState("");
+  const [showPwdCurrent, setShowPwdCurrent] = useState(false);
+  const [showPwdNew, setShowPwdNew] = useState(false);
+  const [showPwdConfirm, setShowPwdConfirm] = useState(false);
+
+  // Inline confirm modal (replaces window.confirm)
+  const [confirmModal, setConfirmModal] = useState<{ message: string; onConfirm: () => void } | null>(null);
+  const confirm = useCallback((message: string, onConfirm: () => void) => {
+    setConfirmModal({ message, onConfirm });
+  }, []);
 
   // Pre-populate from the cached user prop immediately (no API wait)
   useEffect(() => {
@@ -417,15 +427,16 @@ export function ProfilePage({ user, onUserUpdate, onLogout }) {
     setSaving(false);
   };
 
-  const handleDeleteAddress = async (addressId) => {
-    if (!window.confirm("Remove this address?")) return;
-    try {
-      await api.delete(`/api/customer/addresses/${addressId}`);
-      setAddresses(prev => prev.filter(a => a.addressId !== addressId));
-      showToast("Address removed");
-    } catch (e) {
-      setError(e.data?.error?.message || e.message || "Failed to remove address");
-    }
+  const handleDeleteAddress = (addressId) => {
+    confirm("Remove this address?", async () => {
+      try {
+        await api.delete(`/api/customer/addresses/${addressId}`);
+        setAddresses(prev => prev.filter(a => a.addressId !== addressId));
+        showToast("Address removed");
+      } catch (e) {
+        setError(e.data?.error?.message || e.message || "Failed to remove address");
+      }
+    });
   };
 
   const handleSetDefaultAddress = async (addressId) => {
@@ -458,15 +469,16 @@ export function ProfilePage({ user, onUserUpdate, onLogout }) {
     setSaving(false);
   };
 
-  const handleDeleteVehicle = async (garageId) => {
-    if (!window.confirm("Remove this vehicle from your garage?")) return;
-    try {
-      await api.delete(`/api/customer/garage/${garageId}`);
-      setGarageVehicles(prev => prev.filter(v => v.garageId !== garageId));
-      showToast("Vehicle removed");
-    } catch (e) {
-      setError(e.data?.error?.message || e.message || "Failed to remove vehicle");
-    }
+  const handleDeleteVehicle = (garageId) => {
+    confirm("Remove this vehicle from your garage?", async () => {
+      try {
+        await api.delete(`/api/customer/garage/${garageId}`);
+        setGarageVehicles(prev => prev.filter(v => v.garageId !== garageId));
+        showToast("Vehicle removed");
+      } catch (e) {
+        setError(e.data?.error?.message || e.message || "Failed to remove vehicle");
+      }
+    });
   };
 
   const handleSetDefaultVehicle = async (garageId) => {
@@ -512,7 +524,7 @@ export function ProfilePage({ user, onUserUpdate, onLogout }) {
         )}
         {userData?.email && userData?.emailVerified === false && showEmailOtp && (
           <div style={{ ...S.section, marginBottom: 20, borderColor: T.amber }}>
-            <div style={S.sectionTitle}>📧 Verify {userData.email}</div>
+            <div style={S.sectionTitle}><span className="material-symbols-outlined" style={{ fontSize: 18 }}>mark_email_unread</span> Verify {userData.email}</div>
             <div style={{ fontSize: 13, color: T.t3, marginBottom: 14 }}>Enter the 6-digit code we emailed you. It expires in 10 minutes.</div>
             {emailOtpError && <div style={S.error}>{emailOtpError}</div>}
             <div style={{ display: "flex", gap: 10, alignItems: "flex-start", flexWrap: "wrap" }}>
@@ -538,7 +550,7 @@ export function ProfilePage({ user, onUserUpdate, onLogout }) {
         {/* ─── Customer Loyalty Stats ─── */}
         {role === "CUSTOMER" && customerProfile && (
           <div style={S.section}>
-            <div style={S.sectionTitle}>⭐ Loyalty & Wallet</div>
+            <div style={S.sectionTitle}><span className="material-symbols-outlined" style={{ fontSize: 18 }}>star</span> Loyalty & Wallet</div>
             <div style={S.statRow}>
               <div style={S.stat}>
                 <div style={S.statVal}>₹{parseFloat(customerProfile.walletBalance || 0).toFixed(0)}</div>
@@ -562,7 +574,7 @@ export function ProfilePage({ user, onUserUpdate, onLogout }) {
 
         {/* ─── Basic Info ─── */}
         <div style={S.section}>
-          <div style={S.sectionTitle}>👤 Personal Information</div>
+          <div style={S.sectionTitle}><span className="material-symbols-outlined" style={{ fontSize: 18 }}>person</span> Personal Information</div>
           <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 20 }}>
             <Avatar user={userData} size={64} />
             <div>
@@ -601,7 +613,7 @@ export function ProfilePage({ user, onUserUpdate, onLogout }) {
 
         {/* ─── Profile Details ─── */}
         <div style={S.section}>
-          <div style={S.sectionTitle}>📋 Profile Details</div>
+          <div style={S.sectionTitle}><span className="material-symbols-outlined" style={{ fontSize: 18 }}>assignment_ind</span> Profile Details</div>
           <div className="settings-grid" style={S.row}>
             <div style={S.field}>
               <label style={S.label}>Gender</label>
@@ -630,7 +642,7 @@ export function ProfilePage({ user, onUserUpdate, onLogout }) {
         {role === "CUSTOMER" && (
           <div style={S.section}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
-              <div style={S.sectionTitle}>📍 Saved Addresses</div>
+              <div style={S.sectionTitle}><span className="material-symbols-outlined" style={{ fontSize: 18 }}>location_on</span> Saved Addresses</div>
               {!showAddressForm && !editingAddress && (
                 <button style={S.btn("secondary")} onClick={() => setShowAddressForm(true)}>+ Add Address</button>
               )}
@@ -666,7 +678,7 @@ export function ProfilePage({ user, onUserUpdate, onLogout }) {
                     <div style={{ fontSize: 13, color: T.t2 }}>{addr.line1}{addr.line2 ? `, ${addr.line2}` : ""}</div>
                     {addr.landmark && <div style={{ fontSize: 13, color: T.t3 }}>Near: {addr.landmark}</div>}
                     <div style={{ fontSize: 13, color: T.t2 }}>{addr.city}, {addr.state} — {addr.pincode}</div>
-                    <div style={{ fontSize: 12, color: T.t3, marginTop: 4 }}>📞 {addr.phone}</div>
+                    <div style={{ fontSize: 12, color: T.t3, marginTop: 4, display: "flex", alignItems: "center", gap: 4 }}><span className="material-symbols-outlined" style={{ fontSize: 14 }}>call</span>{addr.phone}</div>
                   </>
                 )}
               </div>
@@ -678,7 +690,7 @@ export function ProfilePage({ user, onUserUpdate, onLogout }) {
         {role === "CUSTOMER" && (
           <div style={S.section}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
-              <div style={S.sectionTitle}>🚗 My Garage</div>
+              <div style={S.sectionTitle}><span className="material-symbols-outlined" style={{ fontSize: 18 }}>directions_car</span> My Garage</div>
               {!showGarageForm && !editingVehicle && (
                 <button style={S.btn("secondary")} onClick={() => setShowGarageForm(true)}>+ Add Vehicle</button>
               )}
@@ -706,7 +718,7 @@ export function ProfilePage({ user, onUserUpdate, onLogout }) {
                         {v.make} {v.model}{v.variant ? ` ${v.variant}` : ""} · {v.year}
                         {v.fuelType ? ` · ${v.fuelType}` : ""}
                       </div>
-                      {v.registrationNo && <div style={{ fontSize: 12, color: T.t3, marginTop: 2 }}>🔢 {v.registrationNo}</div>}
+                      {v.registrationNo && <div style={{ fontSize: 12, color: T.t3, marginTop: 2, display: "flex", alignItems: "center", gap: 4 }}><span className="material-symbols-outlined" style={{ fontSize: 14 }}>badge</span>{v.registrationNo}</div>}
                     </div>
                     <div style={{ display: "flex", gap: 8 }}>
                       {!v.isDefault && (
@@ -725,25 +737,27 @@ export function ProfilePage({ user, onUserUpdate, onLogout }) {
         {/* ─── Customer: Danger Zone — delete account ─── */}
         {role === "CUSTOMER" && (
           <div style={{ ...S.section, border: `1px solid rgba(186,26,26,0.25)` }}>
-            <div style={{ ...S.sectionTitle, color: T.crimson }}>⚠️ Danger Zone</div>
+            <div style={{ ...S.sectionTitle, color: T.crimson }}><span className="material-symbols-outlined" style={{ fontSize: 18 }}>warning</span> Danger Zone</div>
             <div style={{ fontSize: 13, color: T.t3, marginBottom: 12, lineHeight: 1.5 }}>
               Deleting your account removes your personal details, addresses and saved vehicles.
               This cannot be undone.
             </div>
             <button
               style={{ ...S.btn("danger") }}
-              onClick={async () => {
-                if (!window.confirm("Delete your account permanently? This cannot be undone.")) return;
-                if (!window.confirm("Last check — all your saved vehicles and addresses will be removed. Continue?")) return;
-                try {
-                  await api.delete("/api/auth/me");
-                  localStorage.removeItem("as_user");
-                  localStorage.removeItem("as_refresh_token");
-                  window.location.replace("/");
-                } catch (e) {
-                  console.error("[ProfilePage] account deletion failed", e);
-                  alert("Could not delete your account — please try again or contact support.");
-                }
+              onClick={() => {
+                confirm("Delete your account permanently? This cannot be undone.", () => {
+                  confirm("Last check — all your saved vehicles and addresses will be removed. Continue?", async () => {
+                    try {
+                      await api.delete("/api/auth/me");
+                      localStorage.removeItem("as_user");
+                      localStorage.removeItem("as_refresh_token");
+                      window.location.replace("/");
+                    } catch (e) {
+                      console.error("[ProfilePage] account deletion failed", e);
+                      setError("Could not delete your account — please try again or contact support.");
+                    }
+                  });
+                });
               }}
             >
               Delete My Account
@@ -757,7 +771,7 @@ export function ProfilePage({ user, onUserUpdate, onLogout }) {
         {role === "SHOP_OWNER" && (
           <div style={S.section}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-              <div style={S.sectionTitle}>👥 Staff Management</div>
+              <div style={S.sectionTitle}><span className="material-symbols-outlined" style={{ fontSize: 18 }}>group</span> Staff Management</div>
               <button onClick={() => navigate("/staff")} style={{ ...S.btn("primary"), padding: "8px 16px", fontSize: 13 }}>Manage Team →</button>
             </div>
             <div style={{ fontSize: 13, color: T.t3, marginTop: 8 }}>Invite staff, edit access, and revoke or remove members from the Staff page.</div>
@@ -766,7 +780,7 @@ export function ProfilePage({ user, onUserUpdate, onLogout }) {
 
         {/* ─── Change Password ─── */}
         <div style={S.section}>
-          <div style={S.sectionTitle}>🔒 Change Password</div>
+          <div style={S.sectionTitle}><span className="material-symbols-outlined" style={{ fontSize: 18 }}>lock</span> Change Password</div>
           {pwdError && <div style={{ ...S.error, marginBottom: 14 }}>{pwdError}</div>}
           {pwdSuccess && (
             <div style={{
@@ -776,28 +790,43 @@ export function ProfilePage({ user, onUserUpdate, onLogout }) {
           )}
           <div style={S.field}>
             <label style={S.label}>Current Password</label>
-            <input
-              style={S.input} type="password"
-              value={pwdCurrent} onChange={e => setPwdCurrent(e.target.value)}
-              placeholder="Enter current password"
-            />
+            <div style={S.passwordWrap}>
+              <input
+                style={{ ...S.input, paddingRight: 44 }} type={showPwdCurrent ? "text" : "password"}
+                value={pwdCurrent} onChange={e => setPwdCurrent(e.target.value)}
+                placeholder="Enter current password"
+              />
+              <button type="button" aria-label={showPwdCurrent ? "Hide password" : "Show password"} style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", border: "none", background: "transparent", color: T.t3, cursor: "pointer", lineHeight: 0, padding: 4 }} onClick={() => setShowPwdCurrent(v => !v)}>
+                {showPwdCurrent ? <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg> : <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>}
+              </button>
+            </div>
           </div>
           <div className="settings-grid" style={S.row}>
             <div style={S.field}>
               <label style={S.label}>New Password</label>
-              <input
-                style={S.input} type="password"
-                value={pwdNew} onChange={e => setPwdNew(e.target.value)}
-                placeholder="Min. 6 characters"
-              />
+              <div style={S.passwordWrap}>
+                <input
+                  style={{ ...S.input, paddingRight: 44 }} type={showPwdNew ? "text" : "password"}
+                  value={pwdNew} onChange={e => setPwdNew(e.target.value)}
+                  placeholder="Min. 6 characters"
+                />
+                <button type="button" aria-label={showPwdNew ? "Hide password" : "Show password"} style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", border: "none", background: "transparent", color: T.t3, cursor: "pointer", lineHeight: 0, padding: 4 }} onClick={() => setShowPwdNew(v => !v)}>
+                  {showPwdNew ? <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg> : <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>}
+                </button>
+              </div>
             </div>
             <div style={S.field}>
               <label style={S.label}>Confirm New Password</label>
-              <input
-                style={S.input} type="password"
-                value={pwdConfirm} onChange={e => setPwdConfirm(e.target.value)}
-                placeholder="Repeat new password"
-              />
+              <div style={S.passwordWrap}>
+                <input
+                  style={{ ...S.input, paddingRight: 44 }} type={showPwdConfirm ? "text" : "password"}
+                  value={pwdConfirm} onChange={e => setPwdConfirm(e.target.value)}
+                  placeholder="Repeat new password"
+                />
+                <button type="button" aria-label={showPwdConfirm ? "Hide password" : "Show password"} style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", border: "none", background: "transparent", color: T.t3, cursor: "pointer", lineHeight: 0, padding: 4 }} onClick={() => setShowPwdConfirm(v => !v)}>
+                  {showPwdConfirm ? <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg> : <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>}
+                </button>
+              </div>
             </div>
           </div>
           <button style={S.btn("primary")} onClick={handleChangePassword} disabled={pwdSaving}>
@@ -807,7 +836,7 @@ export function ProfilePage({ user, onUserUpdate, onLogout }) {
 
         {/* ─── Linked Accounts ─── */}
         <div style={S.section}>
-          <div style={S.sectionTitle}>🔗 Linked Accounts</div>
+          <div style={S.sectionTitle}><span className="material-symbols-outlined" style={{ fontSize: 18 }}>link</span> Linked Accounts</div>
           {providers.length === 0 ? (
             <div style={{ color: T.t3, fontSize: 13, padding: "12px 0" }}>No linked accounts found</div>
           ) : (
@@ -816,7 +845,7 @@ export function ProfilePage({ user, onUserUpdate, onLogout }) {
               return (
                 <div key={i} style={S.providerCard}>
                   <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                    <span style={{ fontSize: 20 }}>{meta.icon}</span>
+                    <span className="material-symbols-outlined" style={{ fontSize: 20, color: T.t2 }}>{meta.icon}</span>
                     <div>
                       <div style={{ fontSize: 14, fontWeight: 600 }}>{meta.label}</div>
                       <div style={{ fontSize: 12, color: T.t3 }}>{p.providerId}</div>
@@ -834,7 +863,7 @@ export function ProfilePage({ user, onUserUpdate, onLogout }) {
         {/* ─── Shop Owner: Stats Overview ─── */}
         {role === "SHOP_OWNER" && shopMetrics && (
           <div style={S.section}>
-            <div style={S.sectionTitle}>📊 Shop Overview</div>
+            <div style={S.sectionTitle}><span className="material-symbols-outlined" style={{ fontSize: 18 }}>bar_chart</span> Shop Overview</div>
             <div style={S.statRow}>
               <div style={S.stat}>
                 <div style={S.statVal}>{shopMetrics.inventoryCount}</div>
@@ -849,8 +878,8 @@ export function ProfilePage({ user, onUserUpdate, onLogout }) {
                 <div style={S.statLabel}>Active Staff</div>
               </div>
               <div style={S.stat}>
-                <div style={{ fontSize: 22, fontWeight: 800, color: shopData?.isVerified ? T.emerald : T.amber }}>
-                  {shopData?.isVerified ? "✓" : "⏳"}
+                <div style={{ fontSize: 22, fontWeight: 800, color: shopData?.isVerified ? T.emerald : T.amber, display: "flex", justifyContent: "center" }}>
+                  <span className="material-symbols-outlined" style={{ fontSize: 26 }}>{shopData?.isVerified ? "verified" : "schedule"}</span>
                 </div>
                 <div style={S.statLabel}>{shopData?.isVerified ? "Verified" : "Pending"}</div>
               </div>
@@ -861,7 +890,7 @@ export function ProfilePage({ user, onUserUpdate, onLogout }) {
         {/* ─── Shop Details (Shop Owners only) ─── */}
         {shopData && (
           <div style={S.section}>
-            <div style={S.sectionTitle}>🏪 Shop Details</div>
+            <div style={S.sectionTitle}><span className="material-symbols-outlined" style={{ fontSize: 18 }}>storefront</span> Shop Details</div>
 
             {/* Shop photo/logo preview */}
             {(shopData.photoUrl || shopData.logoUrl) && (
@@ -1002,7 +1031,7 @@ export function ProfilePage({ user, onUserUpdate, onLogout }) {
 
         {/* ─── Log Out (all users) ─── */}
         <div style={{ ...S.section, border: `1px solid rgba(186,26,26,0.25)` }}>
-          <div style={{ ...S.sectionTitle, color: T.crimson }}>⏻ Log Out</div>
+          <div style={{ ...S.sectionTitle, color: T.crimson }}><span className="material-symbols-outlined" style={{ fontSize: 18 }}>power_settings_new</span> Log Out</div>
           <div style={{ fontSize: 13, color: T.t3, marginBottom: 12, lineHeight: 1.5 }}>
             You'll be signed out of this device and returned to the login page.
           </div>
@@ -1019,6 +1048,38 @@ export function ProfilePage({ user, onUserUpdate, onLogout }) {
       </div>
 
       {toast && <div style={S.toast}>{toast}</div>}
+
+      {confirmModal && (
+        <div style={{
+          position: "fixed", inset: 0, zIndex: 9000,
+          background: "rgba(0,0,0,0.45)", backdropFilter: "blur(4px)",
+          display: "flex", alignItems: "center", justifyContent: "center",
+        }}>
+          <div style={{
+            background: T.surface, border: `1px solid ${T.border}`,
+            borderRadius: 14, padding: "28px 24px", maxWidth: 340, width: "90%",
+            boxShadow: "0 20px 60px rgba(0,0,0,0.2)", fontFamily: FONT.ui,
+          }}>
+            <div style={{ fontSize: 15, fontWeight: 700, color: T.t1, marginBottom: 8, lineHeight: 1.4 }}>
+              {confirmModal.message}
+            </div>
+            <div style={{ display: "flex", gap: 10, marginTop: 20 }}>
+              <button
+                onClick={() => setConfirmModal(null)}
+                style={{ flex: 1, padding: "10px", background: T.bg, border: `1.5px solid ${T.border}`, borderRadius: 8, color: T.t2, fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: FONT.ui }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => { const fn = confirmModal.onConfirm; setConfirmModal(null); fn(); }}
+                style={{ flex: 1, padding: "10px", background: T.crimson, border: "none", borderRadius: 8, color: "#fff", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: FONT.ui }}
+              >
+                Confirm
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

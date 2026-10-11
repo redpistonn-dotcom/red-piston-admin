@@ -1,4 +1,4 @@
-import { useState, useContext, Children, cloneElement } from "react";
+import { useState, useContext, Children, cloneElement, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { GLOBAL_CSS } from "../theme";
 import { AppCtx } from "../AppCtx";
@@ -6,12 +6,15 @@ import { Toast } from "../components/ui";
 import { Avatar } from "../components/Avatar";
 import { BrandHeader } from "../components/BrandHeader";
 
+// Material Symbols Outlined ligature names — same icon-font convention used
+// elsewhere in the app (StatCard.tsx) — not emoji, which render inconsistently
+// across platforms and can't be themed/sized like a real icon.
 const ADMIN_TABS = [
-  { key: "users",         label: "All Users",       icon: "👥" },
-  { key: "verifications", label: "Verifications",   icon: "✅" },
-  { key: "catalog",       label: "Parts Catalog",   icon: "📦" },
-  { key: "autodukan",     label: "Autodukan Import", icon: "🔄" },
-  { key: "system-monitor", label: "System Monitor", icon: "📈" },
+  { key: "users",         label: "All Users",       icon: "group" },
+  { key: "verifications", label: "Verifications",   icon: "verified" },
+  { key: "catalog",       label: "Parts Catalog",   icon: "inventory_2" },
+  { key: "autodukan",     label: "Autodukan Import", icon: "sync" },
+  { key: "system-monitor", label: "System Monitor", icon: "monitoring" },
 ];
 
 // Cream palette specific to admin UI — kept local, not in global theme
@@ -29,7 +32,26 @@ interface AdminShellProps { children: import('react').ReactNode; }
 export function AdminShell({ children }: AdminShellProps) {
   const { toasts, removeToast, currentUser, handleLogout } = useContext(AppCtx);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
-  const [activeTab, setActiveTab] = useState("users");
+
+  // Persist active tab in URL hash so refresh and browser back-button work.
+  const hashTab = window.location.hash.slice(1);
+  const validKeys = ADMIN_TABS.map(t => t.key);
+  const [activeTab, setActiveTabState] = useState(validKeys.includes(hashTab) ? hashTab : "users");
+
+  const setActiveTab = (key: string) => {
+    setActiveTabState(key);
+    window.location.hash = key;
+  };
+
+  useEffect(() => {
+    const onHashChange = () => {
+      const k = window.location.hash.slice(1);
+      if (validKeys.includes(k)) setActiveTabState(k);
+    };
+    window.addEventListener("hashchange", onHashChange);
+    return () => window.removeEventListener("hashchange", onHashChange);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <>
@@ -96,7 +118,7 @@ export function AdminShell({ children }: AdminShellProps) {
               className={`admin-header-tab${activeTab === t.key ? " active" : ""}`}
               onClick={() => setActiveTab(t.key)}
             >
-              <span style={{ marginRight: 6 }}>{t.icon}</span>{t.label}
+              <span className="material-symbols-outlined" style={{ marginRight: 6, fontSize: 18 }}>{t.icon}</span>{t.label}
             </button>
           ))}
         </nav>
@@ -122,7 +144,8 @@ export function AdminShell({ children }: AdminShellProps) {
               transition: "all 0.15s", display: "flex", alignItems: "center", gap: 6,
             }}
           >
-            <span>⏏</span> <span className="admin-signout-text">Sign Out</span>
+            <span className="material-symbols-outlined" style={{ fontSize: 16 }}>logout</span>
+            <span className="admin-signout-text">Sign Out</span>
           </button>
         </div>
       </div>
@@ -144,7 +167,11 @@ export function AdminShell({ children }: AdminShellProps) {
             boxShadow: "0 24px 64px rgba(26,18,5,0.18)", textAlign: "center",
             fontFamily: "'Inter', sans-serif",
           }}>
-            <div style={{ fontSize: 28, marginBottom: 12 }}>⏏</div>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 16 }}>
+              <div style={{ width: 52, height: 52, borderRadius: "50%", background: "#FEF2F2", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <span className="material-symbols-outlined" style={{ fontSize: 24, color: AC.red }}>logout</span>
+              </div>
+            </div>
             <div style={{ fontSize: 17, fontWeight: 800, color: AC.t1, marginBottom: 8, fontFamily: "'Plus Jakarta Sans','Inter',sans-serif" }}>Sign out?</div>
             <div style={{ fontSize: 13, color: AC.t3, lineHeight: 1.6, marginBottom: 28 }}>
               You'll be logged out of the Admin Console.<br />Your session will be securely terminated.

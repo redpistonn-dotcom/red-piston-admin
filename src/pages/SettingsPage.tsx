@@ -184,7 +184,7 @@ export function SettingsPage({ onLogout }) {
 
         {/* ─── Quick links (Profile / Shop — was reported as unresponsive when only this page was open) ─── */}
         <div style={S.section}>
-          <div style={S.sectionTitle}>🏪 Account &amp; shop</div>
+          <div style={S.sectionTitle}><span className="material-symbols-outlined" style={{ fontSize: 18 }}>store</span> Account &amp; shop</div>
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             <button type="button" style={S.linkRow} onClick={() => navigate("/profile", { replace: false })}>
               <span>👤 My Profile</span>
@@ -199,14 +199,14 @@ export function SettingsPage({ onLogout }) {
 
         {/* ─── Printer Settings ─── */}
         <div style={S.section}>
-          <div style={S.sectionTitle}>🖨 Printer &amp; Print Format</div>
+          <div style={S.sectionTitle}><span className="material-symbols-outlined" style={{ fontSize: 18 }}>print</span> Printer &amp; Print Format</div>
 
           <div style={{ marginBottom: 14 }}>
             <label style={S.label}>Default print format</label>
             <div style={{ display: "flex", gap: 10 }}>
               {([
-                { fmt: "a4"      as PrintFormat, icon: "📄", title: "A4 Paper", desc: "Standard A4 sheet — use for professional invoices and quotations." },
-                { fmt: "thermal" as PrintFormat, icon: "🧾", title: "Thermal Receipt", desc: "80mm thermal roll — use for the small receipt printer (like Dmart/Walmart billing)." },
+                { fmt: "a4"      as PrintFormat, icon: "article", title: "A4 Paper", desc: "Standard A4 sheet — use for professional invoices and quotations." },
+                { fmt: "thermal" as PrintFormat, icon: "receipt_long", title: "Thermal Receipt", desc: "80mm thermal roll — use for the small receipt printer (like Dmart/Walmart billing)." },
               ]).map(({ fmt, icon, title, desc }) => (
                 <button
                   key={fmt}
@@ -219,7 +219,7 @@ export function SettingsPage({ onLogout }) {
                     fontFamily: FONT.ui, transition: "all 0.15s",
                   }}
                 >
-                  <div style={{ fontSize: 22, marginBottom: 6 }}>{icon}</div>
+                  <div style={{ fontSize: 22, marginBottom: 6, lineHeight: 1 }}><span className="material-symbols-outlined" style={{ fontSize: 22 }}>{icon}</span></div>
                   <div style={{ fontSize: 13, fontWeight: 700, color: T.t1 }}>{title}</div>
                   <div style={{ fontSize: 11, color: T.t3, marginTop: 3, lineHeight: 1.5 }}>{desc}</div>
                   {printFormat === fmt && (
@@ -242,7 +242,7 @@ export function SettingsPage({ onLogout }) {
 
         {/* ─── Notifications ─── */}
         <div style={S.section}>
-          <div style={S.sectionTitle}>🔔 Notifications</div>
+          <div style={S.sectionTitle}><span className="material-symbols-outlined" style={{ fontSize: 18 }}>notifications</span> Notifications</div>
 
           <div style={S.toggleRow}>
             <div>
@@ -271,7 +271,7 @@ export function SettingsPage({ onLogout }) {
 
         {/* ─── Change Password ─── */}
         <div style={S.section}>
-          <div style={S.sectionTitle}>🔑 Change Password</div>
+          <div style={S.sectionTitle}><span className="material-symbols-outlined" style={{ fontSize: 18 }}>key</span> Change Password</div>
 
           <div>
             <label style={S.label}>Current Password</label>
@@ -285,11 +285,14 @@ export function SettingsPage({ onLogout }) {
               />
               <button
                 type="button"
-                style={S.eyeBtn}
+                style={{ ...S.eyeBtn, lineHeight: 0, padding: 4 }}
                 onClick={() => setShowCurrentPassword(v => !v)}
                 aria-label={showCurrentPassword ? "Hide current password" : "Show current password"}
               >
-                {showCurrentPassword ? "🙈" : "👁"}
+                {showCurrentPassword
+                  ? <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                  : <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                }
               </button>
             </div>
           </div>
@@ -305,11 +308,14 @@ export function SettingsPage({ onLogout }) {
               />
               <button
                 type="button"
-                style={S.eyeBtn}
+                style={{ ...S.eyeBtn, lineHeight: 0, padding: 4 }}
                 onClick={() => setShowNewPassword(v => !v)}
                 aria-label={showNewPassword ? "Hide new password" : "Show new password"}
               >
-                {showNewPassword ? "🙈" : "👁"}
+                {showNewPassword
+                  ? <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                  : <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                }
               </button>
             </div>
           </div>
@@ -326,11 +332,14 @@ export function SettingsPage({ onLogout }) {
               />
               <button
                 type="button"
-                style={S.eyeBtn}
+                style={{ ...S.eyeBtn, lineHeight: 0, padding: 4 }}
                 onClick={() => setShowConfirmNewPassword(v => !v)}
                 aria-label={showConfirmNewPassword ? "Hide confirm password" : "Show confirm password"}
               >
-                {showConfirmNewPassword ? "🙈" : "👁"}
+                {showConfirmNewPassword
+                  ? <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                  : <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                }
               </button>
             </div>
           </div>
@@ -341,7 +350,7 @@ export function SettingsPage({ onLogout }) {
 
         {/* ─── Danger Zone ─── */}
         <div style={{ ...S.section, borderColor: `${T.crimson}33` }}>
-          <div style={{ ...S.sectionTitle, color: T.crimson }}>⚠️ Security</div>
+          <div style={{ ...S.sectionTitle, color: T.crimson }}><span className="material-symbols-outlined" style={{ fontSize: 18 }}>warning</span> Security</div>
 
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 0" }}>
             <div>

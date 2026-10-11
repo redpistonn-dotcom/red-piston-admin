@@ -23,7 +23,7 @@ function ShopPhotoUploader({ photoUrl, onUploaded }: { photoUrl: string; onUploa
         {photoUrl
           ? <img src={photoUrl} alt="Shop" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
           : <div style={{ textAlign: "center", color: "#6b6b75" }}>
-              <div style={{ fontSize: 28 }}>📷</div>
+              <span className="material-symbols-outlined" style={{ fontSize: 28, color: "#6b6b75" }}>photo_camera</span>
               <div style={{ fontSize: 12, marginTop: 4 }}>Upload shop photo</div>
             </div>}
         {uploading && (
@@ -116,6 +116,9 @@ function getErr(e: unknown, fallback = "Something went wrong. Please try again."
 const css = `
   @keyframes fadeUp { from { opacity:0; transform:translateY(14px); } to { opacity:1; transform:translateY(0); } }
   @keyframes auth-pulse { 0%,100%{opacity:1;} 50%{opacity:0.4;} }
+  @keyframes auth-spin { to { transform: rotate(360deg); } }
+  .auth-spinner { display:inline-block; width:22px; height:22px; border:2.5px solid rgba(255,255,255,0.3); border-top-color:#fff; border-radius:50%; animation:auth-spin 0.75s linear infinite; flex-shrink:0; }
+  .auth-spinner-dark { display:inline-block; width:22px; height:22px; border:2.5px solid rgba(26,18,5,0.15); border-top-color:#9C8C7C; border-radius:50%; animation:auth-spin 0.75s linear infinite; flex-shrink:0; }
   .auth-card { animation: fadeUp 0.28s cubic-bezier(0.16,1,0.3,1); }
   .auth-input:focus { border-color: #be2b1a !important; box-shadow: 0 0 0 2px rgba(190,43,26,0.18) !important; outline: none !important; }
   .admin-input:focus { border-color: #7C3AED !important; box-shadow: 0 0 0 2px rgba(124,58,237,0.2) !important; }
@@ -165,7 +168,7 @@ const BASE_S = {
   phoneInput: { flex: 1, background: "transparent", border: "none", outline: "none", color: "#1A1205", fontSize: 15, padding: "12px 14px", fontFamily: "'Inter', sans-serif", letterSpacing: "0.08em" },
   btnPrimary: (disabled) => ({ width: "100%", padding: "14px", background: disabled ? "#E0D5C8" : "#BE2B1A", color: disabled ? "#9C8C7C" : "#FFFFFF", border: "none", borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: disabled ? "not-allowed" : "pointer", fontFamily: "'Inter', sans-serif", textTransform: "uppercase", letterSpacing: "0.08em", transition: "all 0.2s", boxShadow: disabled ? "none" : "0 8px 24px rgba(190,43,26,0.25)", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }),
   btnOutline: { width: "100%", padding: "13px", background: "transparent", border: "1.5px solid #E0D5C8", borderRadius: 8, color: "#5C4F40", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "'Inter', sans-serif", textTransform: "uppercase", letterSpacing: "0.08em", transition: "all 0.2s", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 },
-  btnGoogle: { width: "100%", padding: "13px", background: "#fff", border: "1.5px solid #E0D5C8", borderRadius: 8, color: "#1A1205", fontSize: 13, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 10, fontFamily: "'Inter', sans-serif", textTransform: "uppercase", letterSpacing: "0.06em" },
+  btnGoogle: { width: "100%", padding: "13px", background: "#fff", border: "1.5px solid #E0D5C8", borderRadius: 8, color: "#1A1205", fontSize: 13, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 10, fontFamily: "'Inter', sans-serif" },
   btnBack: { background: "none", border: "none", color: "#9C8C7C", cursor: "pointer", fontSize: 13, padding: "0 0 20px", display: "flex", alignItems: "center", gap: 5, fontFamily: "'Inter', sans-serif" },
   otpRow: { display: "flex", gap: 8, marginBottom: 20, justifyContent: "center" },
   otpBox: { width: 46, height: 54, textAlign: "center", fontSize: 22, fontWeight: 700, fontFamily: "'Inter', sans-serif", background: "#FFFFFF", border: "1.5px solid #E0D5C8", borderRadius: 8, color: "#1A1205", outline: "none" },
@@ -195,10 +198,10 @@ const INDIA_STATES = [
 
 // ─── Left branding panel content ─────────────────────────────────────────────
 const FEATURES = [
-  { icon: "🧾", title: "GST billing in seconds", desc: "Multi-tender invoices with WhatsApp delivery" },
-  { icon: "📦", title: "Live inventory & stock alerts", desc: "Immutable ledger — every movement tracked" },
-  { icon: "🤝", title: "Udhaar / credit tracking", desc: "Digital khata — automated reminders" },
-  { icon: "🔍", title: "Fitment-guaranteed search", desc: "Parts guaranteed to fit your exact vehicle" },
+  { icon: "receipt_long", title: "GST billing in seconds", desc: "Multi-tender invoices with WhatsApp delivery" },
+  { icon: "inventory_2", title: "Live inventory & stock alerts", desc: "Immutable ledger — every movement tracked" },
+  { icon: "handshake", title: "Udhaar / credit tracking", desc: "Digital khata — automated reminders" },
+  { icon: "search", title: "Fitment-guaranteed search", desc: "Parts guaranteed to fit your exact vehicle" },
 ];
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -245,6 +248,12 @@ export default function LoginPage({ onLogin, isModal = false, initialStep = STEP
   // Modal-responsive style tokens — shadow module-level BASE_S.
   // The modal panel is large (≈1000×660), so keep type/controls near full
   // size for readability; only trim a little vs the standalone page.
+  // True only for admin.app.redpiston (the only caller that ever passes this
+  // initialStep) — swaps the shared hero panel's marketplace copy for
+  // admin-console copy and retints the sign-in card violet. See LoginPage's
+  // callers: red-piston-frontend/red-piston-shop never pass ADMIN_AUTH.
+  const isAdminEntry = initialStep === STEPS.ADMIN_AUTH;
+
   const S = isModal ? {
     ...BASE_S,
     // Full-screen login → a deliberate, generous type scale (Plus Jakarta hero,
@@ -605,6 +614,34 @@ export default function LoginPage({ onLogin, isModal = false, initialStep = STEP
     setLoading(false);
   };
 
+  // ── Admin Google sign-in ─────────────────────────────────────────────────────
+  // Deliberately its own function, not the shared googleAuth()/handleAuthResponse()
+  // used by the customer/shop/mechanic tabs: those happily create a brand-new
+  // account on first Google sign-in. An admin account must already exist — Google
+  // here is just an alternate credential for an EXISTING PLATFORM_ADMIN, so a
+  // new-user result is treated as a denial, not onboarded.
+  const adminGoogleSignIn = async () => {
+    setError(""); setGoogleLoading(true);
+    try {
+      const accessToken = await openGoogleAuthPopup();
+      const data = await api.post("/api/auth/google", { accessToken, role: "customer" });
+      const userData = data?.user;
+      if (!userData) throw new Error("Unexpected response.");
+      if (data?.isNewUser || (userData.role !== "PLATFORM_ADMIN" && userData.userType?.slug !== "PLATFORM_ADMIN")) {
+        setError("Access denied. This console is for platform admins only.");
+        setGoogleLoading(false); return;
+      }
+      setTokens(data.accessToken, data.refreshToken);
+      localStorage.setItem("as_user", JSON.stringify(userData));
+      onLogin(userData);
+    } catch (e: any) {
+      if (e?.message === "popup_closed") { /* user cancelled — not an error */ }
+      else if (e?.message === "popup_blocked") setError("Please allow popups for this site and try again.");
+      else setError(getErr(e, "Google sign-in failed. Try again."));
+    }
+    setGoogleLoading(false);
+  };
+
   // ── Forgot password ────────────────────────────────────────────────────────
   const sendForgotPassword = async () => {
     if (!forgotEmail) { setError("Enter your email"); return; }
@@ -646,16 +683,13 @@ export default function LoginPage({ onLogin, isModal = false, initialStep = STEP
     // Full-panel loader while Google popup is verifying
     if (googleLoading) {
       return (
-        <div className="auth-card" style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: 320, gap: 18, textAlign: "center" }}>
-          <div style={{ fontSize: 48, animation: "auth-pulse 1.1s ease-in-out infinite" }}>🔐</div>
+        <div className="auth-card" style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: 320, gap: 20, textAlign: "center" }}>
+          <div style={{ width: 56, height: 56, borderRadius: "50%", background: "#FBF0EE", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <div style={{ width: 28, height: 28, border: "3px solid rgba(190,43,26,0.2)", borderTopColor: "#BE2B1A", borderRadius: "50%", animation: "auth-spin 0.75s linear infinite" }} />
+          </div>
           <div>
             <div style={{ fontSize: 17, fontWeight: 800, color: "#BE2B1A", fontFamily: "'Plus Jakarta Sans', sans-serif", marginBottom: 6 }}>Signing you in…</div>
             <div style={{ fontSize: 12, color: "#9C8C7C", lineHeight: 1.6, maxWidth: 280 }}>Verifying your Google account — just a moment</div>
-          </div>
-          <div style={{ display: "flex", gap: 6, marginTop: 4 }}>
-            {[0,1,2].map(i => (
-              <div key={i} style={{ width: 8, height: 8, borderRadius: "50%", background: "#BE2B1A", opacity: 0.3, animation: `auth-pulse 1.1s ease-in-out ${i * 0.22}s infinite` }} />
-            ))}
           </div>
         </div>
       );
@@ -664,18 +698,15 @@ export default function LoginPage({ onLogin, isModal = false, initialStep = STEP
     // Full-panel loader while email sign-in / register is waiting on the backend
     if (loading && (step === STEPS.SIGNIN || step === STEPS.REG_AUTH || step === STEPS.ADMIN_AUTH)) {
       return (
-        <div className="auth-card" style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: 320, gap: 18, textAlign: "center" }}>
-          <div style={{ fontSize: 48, animation: "auth-pulse 1.1s ease-in-out infinite" }}>⚙️</div>
+        <div className="auth-card" style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: 320, gap: 20, textAlign: "center" }}>
+          <div style={{ width: 56, height: 56, borderRadius: "50%", background: "#FBF0EE", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <div style={{ width: 28, height: 28, border: "3px solid rgba(190,43,26,0.2)", borderTopColor: "#BE2B1A", borderRadius: "50%", animation: "auth-spin 0.75s linear infinite" }} />
+          </div>
           <div>
             <div style={{ fontSize: 17, fontWeight: 800, color: "#BE2B1A", fontFamily: "'Plus Jakarta Sans', sans-serif", marginBottom: 6 }}>
               {step === STEPS.REG_AUTH ? "Creating your account…" : "Signing you in…"}
             </div>
-            <div style={{ fontSize: 12, color: "#9C8C7C", lineHeight: 1.6, maxWidth: 280 }}>This may take a moment — our server may be waking up</div>
-          </div>
-          <div style={{ display: "flex", gap: 6, marginTop: 4 }}>
-            {[0,1,2].map(i => (
-              <div key={i} style={{ width: 8, height: 8, borderRadius: "50%", background: "#BE2B1A", opacity: 0.3, animation: `auth-pulse 1.1s ease-in-out ${i * 0.22}s infinite` }} />
-            ))}
+            <div style={{ fontSize: 12, color: "#9C8C7C", lineHeight: 1.6, maxWidth: 280 }}>This may take a moment</div>
           </div>
         </div>
       );
@@ -694,9 +725,9 @@ export default function LoginPage({ onLogin, isModal = false, initialStep = STEP
               {/* Segmented role toggle */}
               <div style={{ display: "flex", background: "#F0E8DF", borderRadius: 11, padding: 4, marginBottom: 18 }}>
                 {[
-                  { key: "customer", emoji: "🚗", label: "Customer" },
-                  { key: "owner", emoji: "🏪", label: "Shop Owner" },
-                  { key: "mechanic", emoji: "🔧", label: "Mechanic" },
+                  { key: "customer", icon: "directions_car", label: "Customer" },
+                  { key: "owner", icon: "storefront", label: "Shop Owner" },
+                  { key: "mechanic", icon: "build", label: "Mechanic" },
                 ].map(t => (
                   <button
                     key={t.key}
@@ -709,10 +740,10 @@ export default function LoginPage({ onLogin, isModal = false, initialStep = STEP
                       fontFamily: "'Inter', sans-serif",
                       boxShadow: landingTab === t.key ? "0 1px 6px rgba(26,18,5,0.1)" : "none",
                       transition: "all 0.18s",
-                      display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+                      display: "flex", alignItems: "center", justifyContent: "center", gap: 5,
                     }}
                   >
-                    <span>{t.emoji}</span>
+                    <span className="material-symbols-outlined" style={{ fontSize: 15 }}>{t.icon}</span>
                     <span>{t.label}</span>
                   </button>
                 ))}
@@ -737,14 +768,18 @@ export default function LoginPage({ onLogin, isModal = false, initialStep = STEP
                   <label style={S.label}>Password</label>
                   <div style={{ position: "relative", marginBottom: 4 }}>
                     <input className="auth-input" style={{ ...S.input, paddingRight: 44 }} type={showPwd ? "text" : "password"} placeholder="Your password" value={password} onChange={e => setPassword(e.target.value)} onKeyDown={e => e.key === "Enter" && emailSignIn()} />
-                    <button onClick={() => setShowPwd(p => !p)} style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: "#9C8C7C", cursor: "pointer", fontSize: 15 }}>{showPwd ? "🙈" : "👁"}</button>
+                    <button onClick={() => setShowPwd(p => !p)} aria-label={showPwd ? "Hide password" : "Show password"} style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: "#9C8C7C", cursor: "pointer", lineHeight: 0, padding: 4 }}>
+                    {showPwd
+                      ? <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                      : <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>}
+                  </button>
                   </div>
                   <div style={{ textAlign: "right", marginBottom: 14 }}>
                     <button onClick={() => { setForgotMode(true); setForgotEmail(email); setError(""); }} style={{ background: "none", border: "none", color: "#BE2B1A", cursor: "pointer", fontSize: 12, fontFamily: "'Inter',sans-serif", fontWeight: 600 }}>Forgot password?</button>
                   </div>
 
                   <button className="btn-primary" style={{ ...S.btnPrimary(loading || googleLoading), marginBottom: 12 }} disabled={loading || googleLoading} onClick={emailSignIn}>
-                    {loading ? "Signing in…" : "Sign In →"}
+                    {loading ? <><span className="auth-spinner" />Signing in…</> : "Sign In →"}
                   </button>
                   <div style={S.divider}><div style={S.dividerLine}/><span style={S.dividerText}>OR</span><div style={S.dividerLine}/></div>
                   <button className="btn-google" style={{ ...S.btnGoogle, opacity: loading || googleLoading ? 0.6 : 1, cursor: loading || googleLoading ? "not-allowed" : "pointer" }} disabled={loading || googleLoading} onClick={() => googleAuth("signin")}>
@@ -761,7 +796,7 @@ export default function LoginPage({ onLogin, isModal = false, initialStep = STEP
                   <div style={{ fontSize: 13, color: "#9C8C7C", marginBottom: 18 }}>Enter your email and we'll send a reset link.</div>
                   {forgotSent ? (
                     <div style={{ background: "#F0FDF4", border: `1px solid #86EFAC`, borderRadius: 10, padding: "14px 16px", fontSize: 13 }}>
-                      <div style={{ color: "#16A34A", fontWeight: 700, marginBottom: 6 }}>✅ Link sent! Check your inbox.</div>
+                      <div style={{ color: "#16A34A", fontWeight: 700, marginBottom: 6, display: "flex", alignItems: "center", gap: 5 }}><span className="material-symbols-outlined" style={{ fontSize: 16 }}>check_circle</span> Link sent! Check your inbox.</div>
                       <div style={{ color: "#5C4F40", lineHeight: 1.5 }}>
                         We sent a link to <strong style={{ color: "#1A1205" }}>{forgotEmail}</strong>.<br />
                         Click it to set or reset your password. Check spam if you don't see it.
@@ -807,18 +842,20 @@ export default function LoginPage({ onLogin, isModal = false, initialStep = STEP
             {/* Role cards */}
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 22 }}>
               {[
-                { key: "customer", emoji: "🚗", title: "Customer", desc: "Buy auto parts with fitment guarantee", cta: "Create Account",
+                { key: "customer", icon: "directions_car", title: "Customer", desc: "Buy auto parts with fitment guarantee", cta: "Create Account",
                   onSignIn: () => { setLandingTab("customer"); go(STEPS.SIGNIN); },
                   onCreate: () => { setRole("customer"); setLandingTab("customer"); go(STEPS.REG_AUTH); } },
-                { key: "owner", emoji: "🏪", title: "Shop Owner", desc: "Manage your shop, billing & inventory", cta: "Register Shop",
+                { key: "owner", icon: "storefront", title: "Shop Owner", desc: "Manage your shop, billing & inventory", cta: "Register Shop",
                   onSignIn: () => { setLandingTab("owner"); go(STEPS.SIGNIN); },
                   onCreate: () => { setRole("shop"); setLandingTab("owner"); go(STEPS.REG_AUTH); } },
-                { key: "mechanic", emoji: "🔧", title: "Mechanic", desc: "Manage jobs, track clients & grow your workshop", cta: "Register",
+                { key: "mechanic", icon: "build", title: "Mechanic", desc: "Manage jobs, track clients & grow your workshop", cta: "Register",
                   onSignIn: () => { setLandingTab("mechanic"); go(STEPS.SIGNIN); },
                   onCreate: () => { setRole("mechanic"); setLandingTab("mechanic"); go(STEPS.REG_AUTH); } },
               ].map(r => (
                 <div key={r.key} style={{ background: "#FFFFFF", border: "1.5px solid #E0D5C8", borderRadius: 16, padding: "26px 18px", display: "flex", flexDirection: "column", alignItems: "center", gap: 0, boxShadow: "0 2px 10px rgba(26,18,5,0.05)" }}>
-                  <div style={{ width: 58, height: 58, borderRadius: "50%", background: "#FBF0EE", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 30, marginBottom: 14 }}>{r.emoji}</div>
+                  <div style={{ width: 58, height: 58, borderRadius: "50%", background: "#FBF0EE", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 14 }}>
+                    <span className="material-symbols-outlined" style={{ fontSize: 28, color: "#BE2B1A" }}>{r.icon}</span>
+                  </div>
                   <div style={{ fontSize: 17, fontWeight: 800, color: "#1A1205", marginBottom: 6, fontFamily: "'Plus Jakarta Sans', sans-serif" }}>{r.title}</div>
                   <div style={{ fontSize: 13, color: "#9C8C7C", lineHeight: 1.5, textAlign: "center", marginBottom: 20, minHeight: 40 }}>{r.desc}</div>
                   <button className="btn-primary" style={{ ...S.btnPrimary(false), marginBottom: 9 }}
@@ -844,7 +881,7 @@ export default function LoginPage({ onLogin, isModal = false, initialStep = STEP
                 style={{ background: "none", border: "none", color: "#BFB0A0", cursor: "pointer", fontSize: 11, fontFamily: FONT.mono, letterSpacing: "0.06em" }}
                 onClick={() => { setEmail(""); setPassword(""); go(STEPS.ADMIN_AUTH); }}
               >
-                🛡️ PLATFORM ADMIN ACCESS
+                <span className="material-symbols-outlined" style={{ fontSize: 13, verticalAlign: "middle" }}>shield</span> PLATFORM ADMIN ACCESS
               </button>
             </div>
           </div>
@@ -857,7 +894,12 @@ export default function LoginPage({ onLogin, isModal = false, initialStep = STEP
         return (
           <div className="auth-card">
             <button style={S.btnBack} onClick={() => back(STEPS.LANDING)}>← Back</button>
-            <div style={S.chip}>{landingTab === "mechanic" ? "🔧 Mechanic" : landingTab === "owner" ? "🏪 Shop Owner" : "🚗 Customer"} · Sign In</div>
+            <div style={{ ...S.chip, display: "flex", alignItems: "center", gap: 4 }}>
+              <span className="material-symbols-outlined" style={{ fontSize: 12, lineHeight: 1 }}>
+                {landingTab === "mechanic" ? "build" : landingTab === "owner" ? "storefront" : "directions_car"}
+              </span>
+              {landingTab === "mechanic" ? "Mechanic" : landingTab === "owner" ? "Shop Owner" : "Customer"} · Sign In
+            </div>
             <div style={S.heading}>Welcome back</div>
             <div style={S.sub}>{landingTab === "mechanic" ? "Sign in to your mechanic dashboard." : landingTab === "owner" ? "Sign in to your shop dashboard." : "Sign in to browse parts & track orders."}</div>
 
@@ -871,13 +913,17 @@ export default function LoginPage({ onLogin, isModal = false, initialStep = STEP
                 <label style={S.label}>Password</label>
                 <div style={{ position: "relative", marginBottom: 8 }}>
                   <input className="auth-input" style={{ ...S.input, paddingRight: 44 }} type={showPwd ? "text" : "password"} placeholder="Your password" value={password} onChange={e => setPassword(e.target.value)} onKeyDown={e => e.key === "Enter" && emailSignIn()} />
-                  <button onClick={() => setShowPwd(p => !p)} style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: "#9C8C7C", cursor: "pointer", fontSize: 16 }}>{showPwd ? "🙈" : "👁"}</button>
+                  <button onClick={() => setShowPwd(p => !p)} aria-label={showPwd ? "Hide password" : "Show password"} style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: "#9C8C7C", cursor: "pointer", lineHeight: 0, padding: 4 }}>
+                    {showPwd
+                      ? <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                      : <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>}
+                  </button>
                 </div>
                 <div style={{ textAlign: "right", marginBottom: isModal ? 10 : 18 }}>
                   <button onClick={() => { setForgotMode(true); setForgotEmail(email); setError(""); }} style={{ background: "none", border: "none", color: "#BE2B1A", cursor: "pointer", fontSize: 12, fontFamily: FONT.ui, fontWeight: 600 }}>Forgot password?</button>
                 </div>
                 <button className="btn-primary" style={{ ...S.btnPrimary(loading || googleLoading), marginBottom: isModal ? 10 : 16 }} disabled={loading || googleLoading} onClick={emailSignIn}>
-                  {loading ? "Signing in…" : "Sign In →"}
+                  {loading ? <><span className="auth-spinner" />Signing in…</> : "Sign In →"}
                 </button>
                 <div style={S.divider}><div style={S.dividerLine}/><span style={S.dividerText}>OR</span><div style={S.dividerLine}/></div>
                 <button className="btn-google" style={{ ...S.btnGoogle, opacity: loading || googleLoading ? 0.6 : 1, cursor: loading || googleLoading ? "not-allowed" : "pointer" }} disabled={loading || googleLoading} onClick={() => googleAuth("signin")}>
@@ -894,7 +940,7 @@ export default function LoginPage({ onLogin, isModal = false, initialStep = STEP
                 <div style={{ fontSize: 13, color: "#9C8C7C", marginBottom: 18 }}>Enter your email and we'll send a reset link.</div>
                 {forgotSent ? (
                   <div style={{ background: "#F0FDF4", border: `1px solid #86EFAC`, borderRadius: 10, padding: "14px 16px", fontSize: 13 }}>
-                    <div style={{ color: "#16A34A", fontWeight: 700, marginBottom: 6 }}>✅ Link sent! Check your inbox.</div>
+                    <div style={{ color: "#16A34A", fontWeight: 700, marginBottom: 6, display: "flex", alignItems: "center", gap: 5 }}><span className="material-symbols-outlined" style={{ fontSize: 16 }}>check_circle</span> Link sent! Check your inbox.</div>
                     <div style={{ color: "#5C4F40", lineHeight: 1.5 }}>
                       We sent a link to <strong style={{ color: "#1A1205" }}>{forgotEmail}</strong>.<br />
                       Click it to set or reset your password. Check spam if you don't see it.
@@ -943,15 +989,15 @@ export default function LoginPage({ onLogin, isModal = false, initialStep = STEP
 
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 28 }}>
               {[
-                { key: "shop", icon: "🏪", title: "Shop Owner", desc: "Run your auto parts shop — billing, inventory, credit" },
-                { key: "customer", icon: "🚗", title: "Customer / Mechanic", desc: "Buy parts with fitment guarantee & track orders" },
+                { key: "shop", icon: "storefront", title: "Shop Owner", desc: "Run your auto parts shop — billing, inventory, credit" },
+                { key: "customer", icon: "directions_car", title: "Customer / Mechanic", desc: "Buy parts with fitment guarantee & track orders" },
               ].map(r => (
                 <div key={r.key} className={`role-card ${role === r.key ? "selected" : ""}`}
                   onClick={() => setRole(r.key)} role="button" tabIndex={0}
                   onKeyDown={e => (e.key === "Enter" || e.key === " ") && setRole(r.key)}
                   style={{ padding: "20px 14px", borderRadius: 14, border: `2px solid #E0D5C8`, background: "#FFFFFF", cursor: "pointer", textAlign: "center", position: "relative", transition: "all 0.2s", boxShadow: "0 1px 4px rgba(26,18,5,0.06)" }}>
                   {role === r.key && <div style={{ position: "absolute", top: 10, right: 10, width: 22, height: 22, borderRadius: "50%", background: "#BE2B1A", color: "#fff", fontSize: 12, fontWeight: 900, display: "flex", alignItems: "center", justifyContent: "center" }}>✓</div>}
-                  <div style={{ fontSize: 30, marginBottom: 10 }}>{r.icon}</div>
+                  <span className="material-symbols-outlined" style={{ fontSize: 30, color: "#BE2B1A", display: "block", marginBottom: 10 }}>{r.icon}</span>
                   <div style={{ fontSize: 13, fontWeight: 700, color: "#1A1205", marginBottom: 4 }}>{r.title}</div>
                   <div style={{ fontSize: 11, color: "#5C4F40", lineHeight: 1.4 }}>{r.desc}</div>
                 </div>
@@ -969,7 +1015,12 @@ export default function LoginPage({ onLogin, isModal = false, initialStep = STEP
         return (
           <div className="auth-card">
             <button style={S.btnBack} onClick={() => { setHideGoogleForMechanic(false); back(STEPS.LANDING); }}>← Back</button>
-            <div style={S.chip}>{role === "shop" ? "🏪 Register Shop" : role === "mechanic" ? "🔧 Register Mechanic" : "🚗 Customer"} · Step 1 of {role === "mechanic" ? "3" : "3"}</div>
+            <div style={{ ...S.chip, display: "flex", alignItems: "center", gap: 4 }}>
+              <span className="material-symbols-outlined" style={{ fontSize: 12, lineHeight: 1 }}>
+                {role === "shop" ? "storefront" : role === "mechanic" ? "build" : "directions_car"}
+              </span>
+              {role === "shop" ? "Register Shop" : role === "mechanic" ? "Register Mechanic" : "Customer"} · Step 1 of 3
+            </div>
             <div style={S.heading}>{role === "shop" ? "Create Shop Account" : role === "mechanic" ? "Create Mechanic Account" : "Create Account"}</div>
             <div style={S.sub}>{role === "shop" ? "Set up your credentials — shop details come next." : role === "mechanic" ? "Set up your credentials — your profile details come next." : "Quick setup — takes under a minute."}</div>
 
@@ -980,12 +1031,16 @@ export default function LoginPage({ onLogin, isModal = false, initialStep = STEP
             <label style={S.label}>Password</label>
             <div style={{ position: "relative", marginBottom: 12 }}>
               <input className="auth-input" style={{ ...S.input, paddingRight: 44 }} type={showPwd ? "text" : "password"} placeholder="Min. 8 characters" value={password} onChange={e => setPassword(e.target.value)} />
-              <button onClick={() => setShowPwd(p => !p)} style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: "#9C8C7C", cursor: "pointer", fontSize: 16 }}>{showPwd ? "🙈" : "👁"}</button>
+              <button onClick={() => setShowPwd(p => !p)} aria-label={showPwd ? "Hide password" : "Show password"} style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: "#9C8C7C", cursor: "pointer", lineHeight: 0, padding: 4 }}>
+                {showPwd ? <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg> : <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>}
+              </button>
             </div>
             <label style={S.label}>Confirm Password</label>
             <div style={{ position: "relative", marginBottom: 20 }}>
               <input className="auth-input" style={{ ...S.input, paddingRight: 44 }} type={showConfirmPwd ? "text" : "password"} placeholder="Repeat password" value={confirmPwd} onChange={e => setConfirmPwd(e.target.value)} onKeyDown={e => e.key === "Enter" && emailRegister()} />
-              <button onClick={() => setShowConfirmPwd(p => !p)} style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: "#9C8C7C", cursor: "pointer", fontSize: 16 }}>{showConfirmPwd ? "🙈" : "👁"}</button>
+              <button onClick={() => setShowConfirmPwd(p => !p)} aria-label={showConfirmPwd ? "Hide password" : "Show password"} style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: "#9C8C7C", cursor: "pointer", lineHeight: 0, padding: 4 }}>
+                {showConfirmPwd ? <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg> : <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>}
+              </button>
             </div>
             <button className="btn-primary" style={{ ...S.btnPrimary(loading || googleLoading), marginBottom: 14 }} disabled={loading || googleLoading}
               onClick={role === "mechanic" ? emailRegisterMechanic : emailRegister}>
@@ -1073,7 +1128,7 @@ export default function LoginPage({ onLogin, isModal = false, initialStep = STEP
 
             {resumeNotice && (
               <div style={{ background: "#F0FDF4", border: "1px solid #86EFAC", borderRadius: 8, padding: "11px 14px", color: "#15803D", fontSize: 13, marginBottom: 16, lineHeight: 1.5 }}>
-                ✅ {resumeNotice}
+                <span className="material-symbols-outlined" style={{ fontSize: 15, verticalAlign: "middle", color: "#15803D" }}>check_circle</span> {resumeNotice}
               </div>
             )}
             {error && <div style={S.error}>{error}</div>}
@@ -1204,7 +1259,7 @@ export default function LoginPage({ onLogin, isModal = false, initialStep = STEP
             <div style={S.sub}>Tell us a bit about yourself so we can personalise your experience.</div>
             {resumeNotice && (
               <div style={{ background: "#F0FDF4", border: "1px solid #86EFAC", borderRadius: 8, padding: "11px 14px", color: "#15803D", fontSize: 13, marginBottom: 16, lineHeight: 1.5 }}>
-                ✅ {resumeNotice}
+                <span className="material-symbols-outlined" style={{ fontSize: 15, verticalAlign: "middle", color: "#15803D" }}>check_circle</span> {resumeNotice}
               </div>
             )}
             {error && <div style={S.error}>{error}</div>}
@@ -1215,7 +1270,7 @@ export default function LoginPage({ onLogin, isModal = false, initialStep = STEP
               <button type="button"
                 onClick={() => setProfile(p => ({ ...p, profileType: p.profileType === "FLEET_MANAGER" ? "INDIVIDUAL" : "FLEET_MANAGER" }))}
                 style={{ flex: 1, padding: "10px 6px", borderRadius: 8, border: `1.5px solid ${profile.profileType === "FLEET_MANAGER" ? "#BE2B1A" : "#E0D5C8"}`, background: profile.profileType === "FLEET_MANAGER" ? "rgba(190,43,26,0.08)" : "#FFFFFF", color: profile.profileType === "FLEET_MANAGER" ? "#BE2B1A" : "#5C4F40", cursor: "pointer", fontFamily: "'Inter', sans-serif", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", transition: "all 0.15s", textAlign: "center" }}>
-                <div style={{ fontSize: 18, marginBottom: 4 }}>🚚</div>
+                <span className="material-symbols-outlined" style={{ fontSize: 18, marginBottom: 4, display: "block" }}>local_shipping</span>
                 Fleet Manager
               </button>
             </div>
@@ -1223,7 +1278,7 @@ export default function LoginPage({ onLogin, isModal = false, initialStep = STEP
             {/* Vehicle — core to the marketplace experience */}
             <div style={{ background: "#FAF6F0", border: "1px solid #E0D5C8", borderRadius: 10, padding: "14px 14px 10px", marginBottom: 20 }}>
               <div style={{ fontSize: 12, fontWeight: 700, color: "#5C4F40", marginBottom: 10, display: "flex", alignItems: "center", gap: 6 }}>
-                🚗 Add Your Vehicle <span style={{ fontWeight: 400, color: "#9C8C7C", fontSize: 11 }}>(optional — get personalised part suggestions)</span>
+                <span className="material-symbols-outlined" style={{ fontSize: 14, verticalAlign: "middle" }}>directions_car</span> Add Your Vehicle <span style={{ fontWeight: 400, color: "#9C8C7C", fontSize: 11 }}>(optional — get personalised part suggestions)</span>
               </div>
               <div style={{ display: "flex", gap: 10, marginBottom: 10 }}>
                 <input className="auth-input" style={{ ...S.input, flex: 1, marginBottom: 0 }} placeholder="Make (e.g. Maruti)" value={vehicle.make} onChange={e => setVehicle(v => ({ ...v, make: e.target.value }))} />
@@ -1267,7 +1322,7 @@ export default function LoginPage({ onLogin, isModal = false, initialStep = STEP
               ))}
             </div>
 
-            <div style={S.chip}>🔧 Mechanic · Step 2 of 3</div>
+            <div style={{ ...S.chip, display: "flex", alignItems: "center", gap: 4, justifyContent: "center" }}><span className="material-symbols-outlined" style={{ fontSize: 13 }}>build</span>Mechanic · Step 2 of 3</div>
             <div style={S.heading}>Your Details</div>
             <div style={S.sub}>Tell us about yourself and your workshop.</div>
 
@@ -1312,7 +1367,7 @@ export default function LoginPage({ onLogin, isModal = false, initialStep = STEP
                 </div>
               ))}
             </div>
-            <div style={{ width: 72, height: 72, borderRadius: "50%", background: "#FEF2F2", border: `2px solid #BE2B1A`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 34, margin: "0 auto 20px", boxShadow: `0 0 28px rgba(190,43,26,0.18)` }}>⏳</div>
+            <div style={{ width: 72, height: 72, borderRadius: "50%", background: "#FEF2F2", border: `2px solid #BE2B1A`, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px", boxShadow: `0 0 28px rgba(190,43,26,0.18)` }}><span className="material-symbols-outlined" style={{ fontSize: 34, color: "#BE2B1A" }}>hourglass_empty</span></div>
             <div style={{ fontSize: 22, fontWeight: 800, color: "#1A1205", marginBottom: 10 }}>Application Submitted!</div>
             <div style={{ fontSize: 14, color: "#9C8C7C", lineHeight: 1.7, marginBottom: 24, maxWidth: 340, margin: "0 auto 24px" }}>
               Your shop details are under review. We'll email you once approved — usually within <strong style={{ color: "#BE2B1A" }}>24–48 hours</strong>.
@@ -1320,13 +1375,13 @@ export default function LoginPage({ onLogin, isModal = false, initialStep = STEP
             <div style={{ background: "#FAF6F0", border: `1px solid #E0D5C8`, borderRadius: 12, padding: "18px 20px", marginBottom: 24, textAlign: "left" }}>
               <div style={{ fontSize: 11, fontWeight: 700, color: "#BE2B1A", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 14 }}>What happens next</div>
               {[
-                { icon: "✅", label: "Account created & shop details submitted", done: true },
-                { icon: "🔍", label: "Our team reviews your application (24–48 hrs)", done: false },
-                { icon: "📧", label: "You receive an approval email with login link", done: false },
-                { icon: "🏪", label: "Log in and start managing your shop!", done: false },
+                { icon: "check_circle", label: "Account created & shop details submitted", done: true },
+                { icon: "manage_search", label: "Our team reviews your application (24–48 hrs)", done: false },
+                { icon: "email", label: "You receive an approval email with login link", done: false },
+                { icon: "storefront", label: "Log in and start managing your shop!", done: false },
               ].map((item, i) => (
                 <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 10, marginBottom: i < 3 ? 12 : 0 }}>
-                  <span style={{ fontSize: 16, flexShrink: 0, opacity: item.done ? 1 : 0.45 }}>{item.icon}</span>
+                  <span className="material-symbols-outlined" style={{ fontSize: 18, flexShrink: 0, opacity: item.done ? 1 : 0.45, color: "#BE2B1A" }}>{item.icon}</span>
                   <span style={{ fontSize: 13, color: item.done ? "#1A1205" : "#9C8C7C", fontWeight: item.done ? 600 : 400, lineHeight: 1.5 }}>{item.label}</span>
                 </div>
               ))}
@@ -1360,33 +1415,45 @@ export default function LoginPage({ onLogin, isModal = false, initialStep = STEP
       // ══════════════════════════════════════════════════════════════════════
       case STEPS.ADMIN_AUTH:
         return (
-          <div className="auth-card" style={{ border: "1.5px solid #7C3AED", borderRadius: 16, background: "linear-gradient(160deg, #0e0c1f 0%, #0A0F1D 100%)", padding: "28px 32px", boxShadow: "0 0 40px rgba(124,58,237,0.12)" }}>
+          <div className="auth-card" style={{ border: "1.5px solid #E4DAFB", borderRadius: 16, background: "#FFFFFF", padding: "32px 32px 28px", boxShadow: "0 8px 32px rgba(124,58,237,0.10)" }}>
             {/* No "Back" when this is the app's only entry point — LANDING's
                 shop/customer/mechanic picker doesn't apply to this app. */}
             {initialStep !== STEPS.ADMIN_AUTH && (
               <button style={{ ...S.btnBack, color: "#7C3AED" }} onClick={() => go(STEPS.LANDING)}>← Back</button>
             )}
-            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20, padding: "12px 16px", background: "#2D1B69", border: "1px solid #7C3AED", borderRadius: 12 }}>
-              <div style={{ width: 36, height: 36, borderRadius: 10, background: "linear-gradient(135deg, #4F46E5, #7C3AED)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0 }}>🛡️</div>
+            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 24 }}>
+              <div style={{ width: 40, height: 40, borderRadius: 10, background: "linear-gradient(135deg, #4F46E5, #7C3AED)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, boxShadow: "0 4px 14px rgba(124,58,237,0.3)" }}>
+                <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2 4 6v6c0 5 3.4 8.4 8 10 4.6-1.6 8-5 8-10V6l-8-4Z" /></svg>
+              </div>
               <div>
-                <div style={{ fontSize: 12, fontWeight: 800, color: "#A78BFA", letterSpacing: "0.07em", textTransform: "uppercase" }}>Platform Admin Console</div>
-                <div style={{ fontSize: 11, color: "#7C3AED" }}>Restricted access · Authorised personnel only</div>
+                <div style={{ fontSize: 10, fontWeight: 800, color: "#7C3AED", letterSpacing: "0.1em", textTransform: "uppercase", fontFamily: "'Inter', sans-serif" }}>Platform Admin Console</div>
+                <div style={{ fontSize: 11, color: "#9C8C7C", marginTop: 1 }}>Restricted access · Authorised personnel only</div>
               </div>
             </div>
-            <div style={{ fontSize: 18, fontWeight: 800, color: "#e2e2e5", marginBottom: 20 }}>Admin Sign In</div>
+            <div style={{ ...S.heading, marginBottom: 4 }}>Admin Sign In</div>
+            <div style={{ ...S.sub, marginBottom: 22 }}>Sign in with your platform admin credentials.</div>
             {error && <div style={S.error}>{error}</div>}
             <label style={S.label}>Admin Email</label>
-            <input className="auth-input admin-input" style={{ ...S.input, marginBottom: 14 }} type="email" placeholder="admin@redpiston.in" value={email} onChange={e => setEmail(e.target.value)} autoFocus />
+            <input className="auth-input admin-input" style={{ ...S.input, marginBottom: 14 }} type="email" name="email" autoComplete="email" placeholder="admin@redpiston.in" value={email} onChange={e => setEmail(e.target.value)} autoFocus />
             <label style={S.label}>Password</label>
             <div style={{ position: "relative", marginBottom: 22 }}>
-              <input className="auth-input admin-input" style={{ ...S.input, paddingRight: 44 }} type={showPwd ? "text" : "password"} placeholder="Admin password" value={password} onChange={e => setPassword(e.target.value)} onKeyDown={e => e.key === "Enter" && adminSignIn()} />
-              <button onClick={() => setShowPwd(p => !p)} style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: "#9C8C7C", cursor: "pointer", fontSize: 16 }}>{showPwd ? "🙈" : "👁"}</button>
+              <input className="auth-input admin-input" style={{ ...S.input, paddingRight: 44 }} type={showPwd ? "text" : "password"} name="password" autoComplete="current-password" placeholder="Admin password" value={password} onChange={e => setPassword(e.target.value)} onKeyDown={e => e.key === "Enter" && adminSignIn()} />
+              <button onClick={() => setShowPwd(p => !p)} aria-label={showPwd ? "Hide password" : "Show password"} style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: "#9C8C7C", cursor: "pointer", lineHeight: 0, padding: 4 }}>
+                {showPwd
+                  ? <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                  : <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>}
+              </button>
             </div>
             <button
               className="btn-primary"
-              style={{ ...S.btnPrimary(loading), background: loading ? "#2a2a2a" : "linear-gradient(135deg, #4F46E5, #7C3AED)", color: loading ? "#555" : "#fff" }}
-              disabled={loading} onClick={adminSignIn}>
-              {loading ? "Signing in…" : "Access Console →"}
+              style={{ ...S.btnPrimary(loading || googleLoading), background: loading ? "#E0D5C8" : "linear-gradient(135deg, #4F46E5, #7C3AED)", boxShadow: loading ? "none" : "0 8px 24px rgba(124,58,237,0.28)" }}
+              disabled={loading || googleLoading} onClick={adminSignIn}>
+              {loading ? <><span className="auth-spinner" />Signing in…</> : "Access Console →"}
+            </button>
+            <div style={S.divider}><div style={S.dividerLine}/><span style={S.dividerText}>OR</span><div style={S.dividerLine}/></div>
+            <button className="btn-google" style={{ ...S.btnGoogle, opacity: loading || googleLoading ? 0.6 : 1, cursor: loading || googleLoading ? "not-allowed" : "pointer" }} disabled={loading || googleLoading} onClick={adminGoogleSignIn}>
+              <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+              {googleLoading ? "Signing in…" : "Continue with Google"}
             </button>
           </div>
         );
@@ -1418,49 +1485,80 @@ export default function LoginPage({ onLogin, isModal = false, initialStep = STEP
           sizes="(max-width: 1200px) 900px, 1400px"
           alt="Precision automotive engineering"
           loading="lazy"
-          fetchpriority="low"
+          fetchPriority="low"
           decoding="async"
-          style={{ width: "100%", height: "100%", objectFit: "cover", filter: "grayscale(15%) brightness(0.75)", display: "block" }}
+          style={{ width: "100%", height: "100%", objectFit: "cover", filter: isAdminEntry ? "grayscale(60%) brightness(0.5)" : "grayscale(15%) brightness(0.75)", display: "block" }}
           onError={e => { e.target.style.background = "#1a1c1e"; e.target.style.display = "none"; }}
         />
-        {/* Overlay */}
-        <div className="auth-left-overlay" />
+        {/* Overlay — a cooler, more saturated violet wash for the admin entry
+            point distinguishes it from the warm maroon marketplace/shop hero,
+            while keeping the same photo/layout so this stays one shared file. */}
+        <div className="auth-left-overlay" style={isAdminEntry ? { background: "linear-gradient(160deg, rgba(20,10,50,0.55) 0%, rgba(10,6,26,0.88) 100%)" } : undefined} />
 
         {/* Content */}
         <div className="auth-left-content">
           {/* Logo — top */}
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <div style={{ width: 40, height: 40, borderRadius: 8, overflow: "hidden", border: "1.5px solid rgba(255,255,255,0.22)", flexShrink: 0, boxShadow: "0 2px 10px rgba(0,0,0,0.45)" }}>
+            <div style={{ width: 40, height: 40, borderRadius: 8, overflow: "hidden", border: `1.5px solid ${isAdminEntry ? "rgba(196,181,253,0.35)" : "rgba(255,255,255,0.22)"}`, flexShrink: 0, boxShadow: "0 2px 10px rgba(0,0,0,0.45)" }}>
               <img src="/logo.png" alt="RedPiston" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
             </div>
             <div>
               <div style={{ fontSize: 16, fontWeight: 800, color: "#e2e2e5", fontFamily: "'Plus Jakarta Sans','Inter',sans-serif", lineHeight: 1 }}>RedPiston</div>
-              <div style={{ fontSize: 9, color: "#ffb4a7", fontFamily: "'JetBrains Mono',monospace", letterSpacing: "0.12em", textTransform: "uppercase", marginTop: 3 }}>Auto Parts Platform</div>
+              <div style={{ fontSize: 9, color: isAdminEntry ? "#C4B5FD" : "#ffb4a7", fontFamily: "'JetBrains Mono',monospace", letterSpacing: "0.12em", textTransform: "uppercase", marginTop: 3 }}>
+                {isAdminEntry ? "Operations Console" : "Auto Parts Platform"}
+              </div>
             </div>
           </div>
 
-          {/* Headline — middle */}
-          <div style={{ maxWidth: 380 }}>
-            <div style={{ fontSize: 34, fontWeight: 800, color: "#e2e2e5", fontFamily: "'Plus Jakarta Sans','Inter',sans-serif", lineHeight: 1.15, marginBottom: 14, letterSpacing: "-0.02em" }}>
-              Precision Built for Industrial Excellence.
-            </div>
-            <div style={{ fontSize: 13, color: "#e3beb8", lineHeight: 1.6, maxWidth: 340 }}>
-              Access India's most complete auto parts platform — inventory, billing, fitment-guaranteed marketplace, and udhaar ledger.
-            </div>
-          </div>
-
-          {/* Social proof — bottom */}
-          <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-            <div style={{ display: "flex" }}>
-              {["#be2b1a","#282a2c","#1e2022"].map((bg, i) => (
-                <div key={i} style={{ width: 30, height: 30, borderRadius: "50%", border: "2px solid #121416", background: bg, marginLeft: i > 0 ? -8 : 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11 }}>
-                  {["🔧","⚙️","🚗"][i]}
+          {isAdminEntry ? (
+            <>
+              {/* Headline — middle */}
+              <div style={{ maxWidth: 380 }}>
+                <div style={{ fontSize: 34, fontWeight: 800, color: "#e2e2e5", fontFamily: "'Plus Jakarta Sans','Inter',sans-serif", lineHeight: 1.15, marginBottom: 14, letterSpacing: "-0.02em" }}>
+                  Platform control, centralized.
                 </div>
-              ))}
-              <div style={{ width: 30, height: 30, borderRadius: "50%", border: "2px solid #121416", background: "#be2b1a", marginLeft: -8, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9, fontWeight: 800, color: "#ffd9d3", fontFamily: "'JetBrains Mono',monospace" }}>+2k</div>
-            </div>
-            <span style={{ fontSize: 11, color: "#e3beb8", fontWeight: 500 }}>Verified Industry Professionals</span>
-          </div>
+                <div style={{ fontSize: 13, color: "#C9BFEA", lineHeight: 1.6, maxWidth: 340 }}>
+                  Verify shops, manage the platform-wide parts catalog, review the user directory, and monitor system health — all from one console.
+                </div>
+              </div>
+
+              {/* Status row — bottom, replaces the customer-facing "social proof"
+                  avatars with something an internal ops console actually shows. */}
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#22C55E", display: "block", boxShadow: "0 0 8px rgba(34,197,94,0.6)" }} />
+                <span style={{ fontSize: 11, color: "#C9BFEA", fontWeight: 500, fontFamily: "'JetBrains Mono', monospace", letterSpacing: "0.04em" }}>Internal tool · Staff access only</span>
+              </div>
+            </>
+          ) : (
+            <>
+              {/* Headline — middle */}
+              <div style={{ maxWidth: 380 }}>
+                <div style={{ fontSize: 34, fontWeight: 800, color: "#e2e2e5", fontFamily: "'Plus Jakarta Sans','Inter',sans-serif", lineHeight: 1.15, marginBottom: 14, letterSpacing: "-0.02em" }}>
+                  Precision Built for Industrial Excellence.
+                </div>
+                <div style={{ fontSize: 13, color: "#e3beb8", lineHeight: 1.6, maxWidth: 340 }}>
+                  Access India's most complete auto parts platform — inventory, billing, fitment-guaranteed marketplace, and udhaar ledger.
+                </div>
+              </div>
+
+              {/* Social proof — bottom */}
+              <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+                <div style={{ display: "flex" }}>
+                  {[
+                    { bg: "#be2b1a", icon: "build" },
+                    { bg: "#282a2c", icon: "settings" },
+                    { bg: "#1e2022", icon: "directions_car" },
+                  ].map((a, i) => (
+                    <div key={i} style={{ width: 30, height: 30, borderRadius: "50%", border: "2px solid #121416", background: a.bg, marginLeft: i > 0 ? -8 : 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      <span className="material-symbols-outlined" style={{ fontSize: 13, color: "#ffd9d3" }}>{a.icon}</span>
+                    </div>
+                  ))}
+                  <div style={{ width: 30, height: 30, borderRadius: "50%", border: "2px solid #121416", background: "#be2b1a", marginLeft: -8, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9, fontWeight: 800, color: "#ffd9d3", fontFamily: "'JetBrains Mono',monospace" }}>+2k</div>
+                </div>
+                <span style={{ fontSize: 11, color: "#e3beb8", fontWeight: 500 }}>Verified Industry Professionals</span>
+              </div>
+            </>
+          )}
         </div>
       </div>
       )}
@@ -1500,8 +1598,7 @@ export default function LoginPage({ onLogin, isModal = false, initialStep = STEP
         {/* Mobile branding */}
         <div style={{ display: "none" }} className="auth-mobile-brand">
           <div style={{ textAlign: "center", marginBottom: 28 }}>
-            <div style={{ fontSize: 24, fontWeight: 800, color: "#be2b1a" }}>⚙</div>
-            <div style={{ fontSize: 18, fontWeight: 800, color: "#e2e2e5", fontFamily: "'Plus Jakarta Sans',sans-serif" }}>RedPiston</div>
+            <div style={{ fontSize: 18, fontWeight: 800, color: "#BE2B1A", fontFamily: "'Plus Jakarta Sans',sans-serif" }}>RedPiston</div>
           </div>
         </div>
 
@@ -1517,7 +1614,11 @@ export default function LoginPage({ onLogin, isModal = false, initialStep = STEP
         {roleMismatch && (
           <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.45)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 30, backdropFilter: "blur(4px)" }}>
             <div style={{ background: "#FFFFFF", borderRadius: 16, padding: "28px 28px 24px", maxWidth: 360, width: "calc(100% - 40px)", boxShadow: "0 8px 40px rgba(0,0,0,0.18)", fontFamily: "'Inter', sans-serif" }}>
-              <div style={{ fontSize: 28, marginBottom: 12, textAlign: "center" }}>🔔</div>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 12 }}>
+                <div style={{ width: 48, height: 48, borderRadius: "50%", background: "#FEF3C7", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#D97706" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                </div>
+              </div>
               <div style={{ fontSize: 17, fontWeight: 800, color: "#1A1A1A", marginBottom: 8, textAlign: "center", fontFamily: "'Plus Jakarta Sans', sans-serif" }}>Account Already Exists</div>
               <div style={{ fontSize: 13, color: "#5C4F40", lineHeight: 1.55, marginBottom: 22, textAlign: "center" }}>
                 This email is linked to a <strong>{roleMismatch.user.role === "SHOP_OWNER" ? "Shop Owner" : "Customer"}</strong> account.
@@ -1534,14 +1635,15 @@ export default function LoginPage({ onLogin, isModal = false, initialStep = STEP
                       go(STEPS.MECHANIC_DETAILS);
                     } catch (e) { setError(getErr(e, "Conversion failed. Try again.")); }
                   }}
-                  style={{ width: "100%", padding: "12px 0", borderRadius: 10, border: "none", background: "#BE2B1A", color: "#FFFFFF", fontWeight: 700, fontSize: 14, cursor: "pointer", marginBottom: 10, fontFamily: "'Inter', sans-serif" }}>
-                  🔧 Convert to Mechanic Account
+                  style={{ width: "100%", padding: "12px 0", borderRadius: 10, border: "none", background: "#BE2B1A", color: "#FFFFFF", fontWeight: 700, fontSize: 14, cursor: "pointer", marginBottom: 10, fontFamily: "'Inter', sans-serif", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+                  Convert to Mechanic Account
                 </button>
               )}
               <button
                 onClick={() => { setRoleMismatch(null); setRole("mechanic"); setEmail(""); setPassword(""); setConfirmPwd(""); setHideGoogleForMechanic(true); go(STEPS.REG_AUTH); }}
                 style={{ width: "100%", padding: "11px 0", borderRadius: 10, border: "1.5px solid #E0D5C8", background: "#FAF6F0", color: "#5C4F40", fontWeight: 600, fontSize: 14, cursor: "pointer", marginBottom: 10, fontFamily: "'Inter', sans-serif" }}>
-                🔧 Create New Mechanic Account
+                <span className="material-symbols-outlined" style={{ fontSize: 16, verticalAlign: "middle" }}>build</span> Create New Mechanic Account
               </button>
               <button
                 onClick={() => { setRoleMismatch(null); localStorage.setItem("as_user", JSON.stringify(roleMismatch.user)); onLogin(roleMismatch.user); }}
@@ -1556,7 +1658,7 @@ export default function LoginPage({ onLogin, isModal = false, initialStep = STEP
         {settingUp && (
           <div style={{ position: "absolute", inset: 0, background: "rgba(255,255,255,0.92)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 20, backdropFilter: "blur(3px)" }}>
             <div style={{ textAlign: "center" }}>
-              <div style={{ fontSize: 36, marginBottom: 14, animation: "auth-pulse 1s infinite" }}>⚙️</div>
+              <div style={{ marginBottom: 18 }}><span className="auth-spinner-dark" style={{ width: 36, height: 36, border: "3.5px solid rgba(190,43,26,0.2)", borderTopColor: "#BE2B1A" }} /></div>
               <div style={{ fontSize: 15, fontWeight: 700, color: "#BE2B1A", fontFamily: "'Plus Jakarta Sans', sans-serif" }}>Setting up your shop…</div>
               <div style={{ fontSize: 12, color: "#9C8C7C", marginTop: 6 }}>Just a moment</div>
             </div>
@@ -1605,7 +1707,9 @@ export default function LoginPage({ onLogin, isModal = false, initialStep = STEP
       )}
       </div>{/* end content area */}
 
-      {!isModal && (<footer className="auth-footer" style={{ background: "#F1EDE8", borderTop: "1px solid #E0D5C8", padding: "56px 48px 32px", fontFamily: "'Inter', sans-serif" }}>
+      {/* Marketplace/shop footer (About, socials, OEM/OES brand links) — not
+          relevant to a single-purpose internal admin console. */}
+      {!isModal && !isAdminEntry && (<footer className="auth-footer" style={{ background: "#F1EDE8", borderTop: "1px solid #E0D5C8", padding: "56px 48px 32px", fontFamily: "'Inter', sans-serif" }}>
           <div className="auth-footer-grid" style={{ maxWidth: 1200, margin: "0 auto", display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr", gap: "48px 32px" }}>
 
             {/* Brand column */}

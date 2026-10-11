@@ -404,20 +404,22 @@ function AppContent() {
     window.location.replace("/");
   }, [clearStore]);
 
-  const handleImpersonate = useCallback((targetUser, impersonationToken) => {
-    const adminBackup = { user: currentUser, refreshToken: localStorage.getItem('as_refresh_token') };
-    setTokens(impersonationToken, null);
-    setCurrentUser(targetUser);
-    localStorage.setItem('as_user', JSON.stringify(targetUser));
-    setImpersonating(adminBackup);
-    localStorage.setItem('as_impersonating', JSON.stringify(adminBackup));
-    try { sessionStorage.setItem('as_imp_token', impersonationToken); } catch {}
-    if (targetUser.shopId) {
-      setActiveShopId(targetUser.shopId);
-      try { localStorage.setItem('vl_shopId', targetUser.shopId); } catch {}
-    }
-    navigate(getDefaultRoute(targetUser), { replace: true });
-  }, [currentUser, navigate, setActiveShopId]);
+  // This app has no ERP/marketplace routes of its own (see file header) — the
+  // impersonated user's actual dashboard lives on a different origin
+  // (red-piston-shop for SHOP_OWNER/SHOP_STAFF, red-piston-frontend for
+  // everyone else). So "Login as" can't navigate() internally like the
+  // other (pre-split) apps' copy of this function does — it has to send the
+  // browser to that origin's /impersonate-handoff route, carrying only a
+  // one-time exchange code (minted server-side alongside the real token;
+  // see red-piston-backend/src/lib/impersonationHandoff.js for why not the
+  // token itself). This admin tab's own session is left untouched throughout.
+  const handleImpersonate = useCallback((targetUser, handoffCode) => {
+    const role = getUserRole(targetUser);
+    const erpUrl = import.meta.env.VITE_ERP_URL || 'https://red-piston-erp.vercel.app';
+    const marketplaceUrl = import.meta.env.VITE_MARKETPLACE_URL || 'https://www.redpiston.in';
+    const targetBaseUrl = (role === 'SHOP_OWNER' || role === 'SHOP_STAFF') ? erpUrl : marketplaceUrl;
+    window.location.href = `${targetBaseUrl}/impersonate-handoff?code=${encodeURIComponent(handoffCode)}`;
+  }, []);
 
   const handleExitImpersonation = useCallback(async () => {
     if (!impersonating) return;

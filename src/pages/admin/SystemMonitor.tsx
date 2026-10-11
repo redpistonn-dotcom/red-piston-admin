@@ -43,6 +43,7 @@ function StatCard({ icon, label, value, sub, color, bg }: any) {
 export default function SystemMonitor() {
   const logEndRef = useRef<HTMLDivElement>(null);
   const [sentryToken, setSentryToken] = useState('');
+  const activeSentryToken = sentryToken.trim();
 
   // Backend system metrics
   const { data: metrics, isLoading, refetch, isRefetching } = useQuery({
